@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
-  const isPublicPage = req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/register");
+  const isPublicPage = req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/setup");
 
   if (!isLoggedIn && !isPublicPage) {
     const loginUrl = new URL("/login", req.nextUrl.origin);

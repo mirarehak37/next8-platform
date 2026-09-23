@@ -2,7 +2,6 @@
 
 import { useState, useTransition, Suspense } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { loginAction } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -75,10 +74,7 @@ function LoginForm() {
                 </Button>
               </form>
               <p className="text-sm text-muted-foreground text-center mt-4">
-                Nemáte účet?{" "}
-                <Link href="/register" className="text-foreground font-medium hover:underline">
-                  Zaregistrujte svou firmu
-                </Link>
+                Nemáte přístup? Ozvěte se administrátorovi — noví uživatelé se přidávají přímo v aplikaci.
               </p>
             </CardContent>
           </Card>
