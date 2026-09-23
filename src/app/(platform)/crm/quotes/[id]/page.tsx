@@ -14,10 +14,13 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const session = await auth();
   const user = session!.user;
 
-  const quote = await prisma.quote.findFirst({
-    where: { id, tenantId: user.tenantId },
-    include: { company: true, contact: true, deal: true, owner: true, items: { orderBy: { order: "asc" } } },
-  });
+  const [quote, tenant] = await Promise.all([
+    prisma.quote.findFirst({
+      where: { id, tenantId: user.tenantId },
+      include: { company: true, contact: true, deal: true, owner: true, items: { orderBy: { order: "asc" } } },
+    }),
+    prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { legalName: true, name: true } }),
+  ]);
   if (!quote) notFound();
 
   return (
@@ -32,7 +35,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           <CardContent className="space-y-6 p-8">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-xs text-muted-foreground">NEXT8 Performance s.r.o.</div>
+                <div className="text-xs text-muted-foreground">{tenant?.legalName ?? tenant?.name}</div>
                 <h2 className="text-xl font-semibold mt-1">Cenová nabídka {quote.number}</h2>
                 <div className="text-sm text-muted-foreground mt-1">Vystaveno: {formatDate(quote.createdAt)}</div>
                 {quote.validUntil && <div className="text-sm text-muted-foreground">Platnost do: {formatDate(quote.validUntil)}</div>}

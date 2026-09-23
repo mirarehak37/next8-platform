@@ -20,9 +20,11 @@ const ICONS: Record<string, LucideIcon> = {
 
 export function Sidebar({
   role,
+  tenantName,
   futureModules,
 }: {
   role: string;
+  tenantName: string;
   futureModules: { name: string; icon: string }[];
 }) {
   const pathname = usePathname();
@@ -92,8 +94,8 @@ export function Sidebar({
         )}
       </nav>
 
-      <div className="px-4 py-3 border-t border-neutral-800 text-[11px] text-neutral-600">
-        NEXT8 Performance s.r.o. · v0.1 demo
+      <div className="px-4 py-3 border-t border-neutral-800 text-[11px] text-neutral-600 truncate" title={tenantName}>
+        {tenantName}
       </div>
     </aside>
   );

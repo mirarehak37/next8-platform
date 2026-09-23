@@ -4,8 +4,8 @@ import { scopeFor, type ModuleResource } from "@/lib/rbac";
 export type SessionUser = { id: string; tenantId: string; role: string };
 
 // Resolves a record-visibility scope (own/team/all) into a Prisma `where` fragment.
-// "team" scope is approximated via the user's team memberships' fellow members —
-// good enough for the demo; a real deployment would cache this per request.
+// "team" scope is approximated via the user's team memberships' fellow members;
+// a high-traffic deployment would want to cache this per request.
 export async function ownerScopeWhere(user: SessionUser, resource: ModuleResource, ownerField = "ownerId") {
   const scope = scopeFor(user.role, resource) ?? "own";
   if (scope === "all") return { tenantId: user.tenantId };

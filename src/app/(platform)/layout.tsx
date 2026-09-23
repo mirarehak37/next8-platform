@@ -8,7 +8,8 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const [disabledModules, overdueTasks] = await Promise.all([
+  const [tenant, disabledModules, overdueTasks] = await Promise.all([
+    prisma.tenant.findUnique({ where: { id: session.user.tenantId }, select: { name: true } }),
     prisma.tenantModule.findMany({
       where: { tenantId: session.user.tenantId, enabled: false },
       include: { module: true },
@@ -28,6 +29,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
     <div className="flex min-h-screen">
       <Sidebar
         role={session.user.role}
+        tenantName={tenant?.name ?? ""}
         futureModules={disabledModules.map((m) => ({ name: m.module.name, icon: m.module.icon }))}
       />
       <div className="flex-1 flex flex-col min-w-0">

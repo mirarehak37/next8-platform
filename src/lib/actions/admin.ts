@@ -13,11 +13,20 @@ const userSchema = z.object({
   roleId: z.string().min(1, "Role je povinná"),
 });
 
+// Readable random temp password (avoids visually ambiguous chars like 0/O, 1/l/I).
+function generateTempPassword() {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let out = "";
+  for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
 export async function createUser(data: unknown) {
   const user = await requirePermission("admin", "admin");
   const parsed = userSchema.parse(data);
 
-  const passwordHash = await bcrypt.hash("demo1234", 10);
+  const tempPassword = generateTempPassword();
+  const passwordHash = await bcrypt.hash(tempPassword, 10);
   const newUser = await prisma.user.create({
     data: { tenantId: user.tenantId, name: parsed.name, email: parsed.email, jobTitle: parsed.jobTitle, passwordHash, status: "invited" },
   });
@@ -25,7 +34,7 @@ export async function createUser(data: unknown) {
 
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "user", entityId: newUser.id, action: "create" });
   revalidatePath("/admin/users");
-  return newUser;
+  return { user: newUser, tempPassword };
 }
 
 export async function setUserStatus(id: string, status: string) {
