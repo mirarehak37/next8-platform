@@ -31,7 +31,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   });
   if (!deal) notFound();
 
-  const [activities, owners, companies] = await Promise.all([
+  const [activities, owners, companies, contacts] = await Promise.all([
     prisma.activity.findMany({
       where: { tenantId: user.tenantId, subjectType: "deal", subjectId: id },
       include: { owner: { select: { name: true } } },
@@ -39,7 +39,9 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.contact.findMany({ where: { tenantId: user.tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } }),
   ]);
+  const contactOptions = contacts.map((c) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }));
 
   const statusMeta = findMeta(DEAL_STATUSES, deal.status);
   const stages = deal.pipeline.stages.filter((s) => !s.isWon && !s.isLost);
@@ -54,6 +56,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           <DealFormDialog
             owners={owners}
             companies={companies}
+            contacts={contactOptions}
             stages={deal.pipeline.stages}
             pipelineId={deal.pipelineId}
             deal={{

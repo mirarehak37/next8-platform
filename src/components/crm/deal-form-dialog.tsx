@@ -14,7 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/form-select";
+import { FormCombobox } from "@/components/form-combobox";
+import { FormCurrencyInput } from "@/components/form-currency-input";
 import { Plus, Pencil } from "lucide-react";
+import { LEAD_SOURCES } from "@/lib/constants";
 
 type Option = { id: string; name: string };
 type Stage = { id: string; name: string };
@@ -22,6 +25,7 @@ type Stage = { id: string; name: string };
 export function DealFormDialog({
   owners,
   companies,
+  contacts = [],
   stages,
   pipelineId,
   deal,
@@ -30,6 +34,7 @@ export function DealFormDialog({
 }: {
   owners: Option[];
   companies: Option[];
+  contacts?: Option[];
   stages: Stage[];
   pipelineId: string;
   deal?: (DealInput & { id: string }) | null;
@@ -83,11 +88,11 @@ export function DealFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Firma</Label>
-              <Controller control={control} name="companyId" render={({ field }) => <FormSelect value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez firmy" />} />
+              <Controller control={control} name="companyId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez firmy" allowClear clearLabel="Bez firmy" />} />
             </div>
             <div className="space-y-1.5">
-              <Label>Hodnota (Kč) *</Label>
-              <Input type="number" step="1" {...register("value")} />
+              <Label>Hodnota *</Label>
+              <Controller control={control} name="value" render={({ field }) => <FormCurrencyInput value={field.value} onChange={field.onChange} />} />
             </div>
             <div className="space-y-1.5">
               <Label>Fáze</Label>
@@ -98,12 +103,16 @@ export function DealFormDialog({
               <Input type="date" {...register("expectedCloseDate")} />
             </div>
             <div className="space-y-1.5">
+              <Label>Kontaktní osoba</Label>
+              <Controller control={control} name="primaryContactId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={contacts.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez kontaktu" allowClear clearLabel="Bez kontaktu" />} />
+            </div>
+            <div className="space-y-1.5">
               <Label>Vlastník *</Label>
               <Controller control={control} name="ownerId" render={({ field }) => <FormSelect value={field.value} onChange={field.onChange} options={owners.map((o) => ({ value: o.id, label: o.name }))} />} />
             </div>
             <div className="space-y-1.5">
               <Label>Zdroj</Label>
-              <Input {...register("source")} />
+              <Controller control={control} name="source" render={({ field }) => <FormSelect value={field.value} onChange={field.onChange} options={LEAD_SOURCES.map((s) => ({ value: s, label: s }))} placeholder="Vyberte…" />} />
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Další krok</Label>

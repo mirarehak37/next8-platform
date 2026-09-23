@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/form-select";
+import { FormCombobox } from "@/components/form-combobox";
 import { Plus } from "lucide-react";
 import { ACTIVITY_TYPES } from "@/lib/constants";
 
@@ -89,7 +90,7 @@ export function ActivityFormDialog({
                 control={control}
                 name="subjectId"
                 render={({ field }) => (
-                  <FormSelect
+                  <FormCombobox
                     value={field.value}
                     onChange={field.onChange}
                     options={(subjectType === "deal" ? deals : companies).map((o) => ({ value: o.id, label: o.name }))}

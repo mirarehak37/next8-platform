@@ -129,6 +129,47 @@ export const ROADMAP_EFFORTS = [
 
 export const ROADMAP_QUARTERS = ["Q4 2026", "Q1 2027", "Q2 2027", "Q3 2027", "Q4 2027"] as const;
 
+export const INDUSTRIES = [
+  "IT a software",
+  "Výroba",
+  "Stavebnictví",
+  "Maloobchod",
+  "Velkoobchod",
+  "Logistika a doprava",
+  "Finance a pojišťovnictví",
+  "Zdravotnictví",
+  "Vzdělávání",
+  "Marketing a reklama",
+  "Nemovitosti",
+  "Pohostinství a cestovní ruch",
+  "Energetika",
+  "Zemědělství",
+  "Veřejná správa",
+  "Jiné",
+] as const;
+
+export const PRODUCT_CATEGORIES = [
+  "Software",
+  "Hardware",
+  "Konzultace",
+  "Implementace",
+  "Podpora a servis",
+  "Školení",
+  "Licence",
+  "Předplatné",
+] as const;
+
+export const PRODUCT_UNITS = [
+  { value: "ks", label: "ks" },
+  { value: "hod", label: "hod" },
+  { value: "den", label: "den" },
+  { value: "měsíc", label: "měsíc" },
+  { value: "rok", label: "rok" },
+  { value: "balení", label: "balení" },
+  { value: "licence", label: "licence" },
+  { value: "GB", label: "GB" },
+] as const;
+
 export function findMeta<T extends { value: string; label: string; color?: string }>(
   list: readonly T[],
   value: string | null | undefined,

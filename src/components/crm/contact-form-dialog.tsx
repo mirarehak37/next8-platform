@@ -17,6 +17,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/form-select";
+import { FormCombobox } from "@/components/form-combobox";
 import { Plus, Pencil } from "lucide-react";
 import { CONTACT_STATUSES, LEAD_SOURCES } from "@/lib/constants";
 
@@ -107,11 +108,11 @@ export function ContactFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Telefon</Label>
-              <Input {...register("phone")} />
+              <Input type="tel" {...register("phone")} />
             </div>
             <div className="space-y-1.5">
               <Label>Mobil</Label>
-              <Input {...register("mobile")} />
+              <Input type="tel" {...register("mobile")} />
             </div>
             <div className="space-y-1.5">
               <Label>Zdroj</Label>
@@ -127,7 +128,7 @@ export function ContactFormDialog({
                 control={control}
                 name="companyId"
                 render={({ field }) => (
-                  <FormSelect value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez firmy" />
+                  <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez firmy" allowClear clearLabel="Bez firmy" />
                 )}
               />
             </div>

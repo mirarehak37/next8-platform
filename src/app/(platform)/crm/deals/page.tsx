@@ -12,7 +12,7 @@ export default async function DealsPage() {
   const user = session!.user;
 
   const scope = await ownerScopeWhere(user, "deal");
-  const [pipeline, deals, owners, companies] = await Promise.all([
+  const [pipeline, deals, owners, companies, contacts] = await Promise.all([
     prisma.pipeline.findFirst({ where: { tenantId: user.tenantId, isDefault: true }, include: { stages: { orderBy: { order: "asc" } } } }),
     prisma.deal.findMany({
       where: scope,
@@ -21,7 +21,9 @@ export default async function DealsPage() {
     }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.contact.findMany({ where: { tenantId: user.tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } }),
   ]);
+  const contactOptions = contacts.map((c) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }));
 
   if (!pipeline) return null;
 
@@ -61,7 +63,7 @@ export default async function DealsPage() {
         title="Obchodní případy"
         description={`${kanbanDeals.length} otevřených obchodů v hodnotě ${new Intl.NumberFormat("cs-CZ").format(openValue)} Kč`}
         breadcrumbs={[{ label: "CRM" }, { label: "Obchodní případy" }]}
-        actions={<DealFormDialog owners={owners} companies={companies} stages={stages} pipelineId={pipeline.id} />}
+        actions={<DealFormDialog owners={owners} companies={companies} contacts={contactOptions} stages={stages} pipelineId={pipeline.id} />}
       />
       <div className="p-6">
         <Tabs defaultValue="kanban">
@@ -70,7 +72,7 @@ export default async function DealsPage() {
             <TabsTrigger value="list">Seznam</TabsTrigger>
           </TabsList>
           <TabsContent value="kanban" className="pt-4">
-            <DealsKanban stages={stages} deals={kanbanDeals} owners={owners} companies={companies} pipelineId={pipeline.id} />
+            <DealsKanban stages={stages} deals={kanbanDeals} owners={owners} companies={companies} contacts={contactOptions} pipelineId={pipeline.id} />
           </TabsContent>
           <TabsContent value="list" className="pt-4">
             <DealsTable data={tableRows} />

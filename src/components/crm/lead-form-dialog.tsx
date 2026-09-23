@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/form-select";
+import { FormCurrencyInput } from "@/components/form-currency-input";
 import { Plus, Pencil } from "lucide-react";
 import { LEAD_STATUSES, LEAD_RATINGS, LEAD_SOURCES } from "@/lib/constants";
 
@@ -75,7 +76,7 @@ export function LeadFormDialog({ owners, lead, trigger }: { owners: Owner[]; lea
             </div>
             <div className="space-y-1.5">
               <Label>Odhadovaná hodnota</Label>
-              <Input type="number" {...register("estimatedValue")} />
+              <Controller control={control} name="estimatedValue" render={({ field }) => <FormCurrencyInput value={field.value} onChange={field.onChange} />} />
             </div>
             <div className="space-y-1.5">
               <Label>E-mail</Label>
@@ -83,7 +84,7 @@ export function LeadFormDialog({ owners, lead, trigger }: { owners: Owner[]; lea
             </div>
             <div className="space-y-1.5">
               <Label>Telefon</Label>
-              <Input {...register("phone")} />
+              <Input type="tel" {...register("phone")} />
             </div>
             <div className="space-y-1.5">
               <Label>Zdroj</Label>

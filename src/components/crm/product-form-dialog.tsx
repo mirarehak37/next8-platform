@@ -15,7 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/form-select";
+import { FormCombobox } from "@/components/form-combobox";
+import { FormCurrencyInput } from "@/components/form-currency-input";
 import { Plus, Pencil } from "lucide-react";
+import { PRODUCT_CATEGORIES, PRODUCT_UNITS } from "@/lib/constants";
 
 export function ProductFormDialog({ product, trigger }: { product?: (ProductInput & { id: string }) | null; trigger?: React.ReactElement }) {
   const [open, setOpen] = useState(false);
@@ -66,11 +69,11 @@ export function ProductFormDialog({ product, trigger }: { product?: (ProductInpu
             </div>
             <div className="space-y-1.5">
               <Label>Kategorie</Label>
-              <Input {...register("category")} />
+              <Controller control={control} name="category" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={PRODUCT_CATEGORIES.map((c) => ({ value: c, label: c }))} placeholder="Vyberte kategorii" creatable allowClear />} />
             </div>
             <div className="space-y-1.5">
               <Label>Cena (bez DPH)</Label>
-              <Input type="number" step="0.01" {...register("price")} />
+              <Controller control={control} name="price" render={({ field }) => <FormCurrencyInput value={field.value} onChange={field.onChange} />} />
             </div>
             <div className="space-y-1.5">
               <Label>DPH %</Label>
@@ -78,7 +81,7 @@ export function ProductFormDialog({ product, trigger }: { product?: (ProductInpu
             </div>
             <div className="space-y-1.5">
               <Label>Jednotka</Label>
-              <Input {...register("unit")} />
+              <Controller control={control} name="unit" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={[...PRODUCT_UNITS]} placeholder="Vyberte jednotku" creatable />} />
             </div>
             <div className="space-y-1.5">
               <Label>Fakturační perioda</Label>

@@ -32,12 +32,14 @@ export function DealsKanban({
   deals,
   owners,
   companies,
+  contacts = [],
   pipelineId,
 }: {
   stages: KanbanStage[];
   deals: KanbanDeal[];
   owners: { id: string; name: string }[];
   companies: { id: string; name: string }[];
+  contacts?: { id: string; name: string }[];
   pipelineId: string;
 }) {
   const router = useRouter();
@@ -94,6 +96,7 @@ export function DealsKanban({
               <DealFormDialog
                 owners={owners}
                 companies={companies}
+                contacts={contacts}
                 stages={stages}
                 pipelineId={pipelineId}
                 defaultStageId={stage.id}

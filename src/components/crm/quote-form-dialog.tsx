@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FormSelect } from "@/components/form-select";
+import { FormCombobox } from "@/components/form-combobox";
 import { Plus, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 
@@ -27,7 +27,7 @@ type FormValues = {
   items: { productId?: string | null; name: string; quantity: number; unitPrice: number; vatRate: number }[];
 };
 
-export function QuoteFormDialog({ companies, deals, products }: { companies: Option[]; deals: Option[]; products: ProductOption[] }) {
+export function QuoteFormDialog({ companies, deals, products, contacts = [] }: { companies: Option[]; deals: Option[]; products: ProductOption[]; contacts?: Option[] }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -69,14 +69,18 @@ export function QuoteFormDialog({ companies, deals, products }: { companies: Opt
           <DialogTitle>Nová nabídka</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Firma</Label>
-              <Controller control={control} name="companyId" render={({ field }) => <FormSelect value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Vyberte…" />} />
+              <Controller control={control} name="companyId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Vyberte…" allowClear />} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Kontaktní osoba</Label>
+              <Controller control={control} name="contactId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={contacts.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez kontaktu" allowClear clearLabel="Bez kontaktu" />} />
             </div>
             <div className="space-y-1.5">
               <Label>Obchodní případ</Label>
-              <Controller control={control} name="dealId" render={({ field }) => <FormSelect value={field.value} onChange={field.onChange} options={deals.map((d) => ({ value: d.id, label: d.name }))} placeholder="Bez vazby" />} />
+              <Controller control={control} name="dealId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={deals.map((d) => ({ value: d.id, label: d.name }))} placeholder="Bez vazby" allowClear clearLabel="Bez vazby" />} />
             </div>
             <div className="space-y-1.5">
               <Label>Platnost do</Label>
@@ -91,7 +95,7 @@ export function QuoteFormDialog({ companies, deals, products }: { companies: Opt
                 <div key={field.id} className="p-2.5 grid grid-cols-12 gap-2 items-end">
                   <div className="col-span-4 space-y-1">
                     {index === 0 && <Label className="text-xs">Produkt</Label>}
-                    <FormSelect value={items[index]?.productId ?? undefined} onChange={(v) => applyProduct(index, v)} options={products.map((p) => ({ value: p.id, label: p.name }))} placeholder="Vyberte produkt" className="w-full" />
+                    <FormCombobox value={items[index]?.productId ?? undefined} onChange={(v) => applyProduct(index, v)} options={products.map((p) => ({ value: p.id, label: p.name }))} placeholder="Vyberte produkt" className="w-full" />
                   </div>
                   <div className="col-span-3 space-y-1">
                     {index === 0 && <Label className="text-xs">Název</Label>}

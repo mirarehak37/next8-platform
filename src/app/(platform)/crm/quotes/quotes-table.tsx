@@ -26,11 +26,13 @@ export function QuotesTable({
   companies,
   deals,
   products,
+  contacts = [],
 }: {
   data: QuoteRow[];
   companies: { id: string; name: string }[];
   deals: { id: string; name: string }[];
   products: { id: string; name: string; price: number; vatRate: number }[];
+  contacts?: { id: string; name: string }[];
 }) {
   const columns = useMemo<ColumnDef<QuoteRow, unknown>[]>(
     () => [
@@ -61,7 +63,7 @@ export function QuotesTable({
       exportFilename="nabidky"
       emptyMessage="Zatím žádné nabídky."
       facets={[{ columnId: "status", title: "Stav", options: QUOTE_STATUSES.map((s) => ({ value: s.value, label: s.label })) }]}
-      toolbarActions={<QuoteFormDialog companies={companies} deals={deals} products={products} />}
+      toolbarActions={<QuoteFormDialog companies={companies} deals={deals} products={products} contacts={contacts} />}
     />
   );
 }

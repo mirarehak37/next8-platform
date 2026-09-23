@@ -16,8 +16,9 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/form-select";
+import { FormCombobox } from "@/components/form-combobox";
 import { Plus, Pencil } from "lucide-react";
-import { COMPANY_STATUSES, COMPANY_SIZE_BANDS, LEAD_SOURCES } from "@/lib/constants";
+import { COMPANY_STATUSES, COMPANY_SIZE_BANDS, LEAD_SOURCES, INDUSTRIES } from "@/lib/constants";
 
 type Owner = { id: string; name: string };
 
@@ -118,7 +119,13 @@ export function CompanyFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Obor</Label>
-              <Input {...register("industry")} />
+              <Controller
+                control={control}
+                name="industry"
+                render={({ field }) => (
+                  <FormCombobox value={field.value} onChange={field.onChange} options={INDUSTRIES.map((i) => ({ value: i, label: i }))} placeholder="Vyberte obor" creatable allowClear />
+                )}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Segment</Label>
@@ -130,7 +137,7 @@ export function CompanyFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Telefon</Label>
-              <Input {...register("phone")} />
+              <Input type="tel" {...register("phone")} />
             </div>
             <div className="space-y-1.5">
               <Label>E-mail</Label>
