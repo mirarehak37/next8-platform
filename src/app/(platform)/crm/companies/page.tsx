@@ -22,6 +22,8 @@ export default async function CompaniesPage() {
     id: c.id,
     name: c.name,
     industry: c.industry,
+    sport: c.sport,
+    league: c.league,
     segment: c.segment,
     status: c.status,
     city: c.billingCity,
@@ -35,9 +37,9 @@ export default async function CompaniesPage() {
   return (
     <div>
       <PageHeader
-        title="Firmy"
-        description={`${rows.length} firem v databázi`}
-        breadcrumbs={[{ label: "CRM" }, { label: "Firmy" }]}
+        title="Kluby"
+        description={`${rows.length} klubů v databázi`}
+        breadcrumbs={[{ label: "CRM" }, { label: "Kluby" }]}
       />
       <div className="p-6">
         <CompaniesTable data={rows} owners={owners} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -45,6 +45,13 @@ export function DealsKanban({
   const router = useRouter();
   const [items, setItems] = useState(deals);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // `deals` is a fresh array from the server after every router.refresh() (new
+  // deal created, stage moved elsewhere, etc.), but useState only reads it once
+  // on mount — without this the board silently goes stale until a hard reload.
+  useEffect(() => {
+    setItems(deals);
+  }, [deals]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const byStage = useMemo(() => {

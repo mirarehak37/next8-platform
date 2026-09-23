@@ -6,7 +6,7 @@ export default function ImportPage() {
     <div>
       <PageHeader
         title="Import dat"
-        description="Hromadně importujte firmy, kontakty, leady nebo produkty z Excelu, CSV nebo vloženého textu."
+        description="Hromadně importujte kluby, kontakty, leady nebo produkty z Excelu, CSV nebo vloženého textu."
         breadcrumbs={[{ label: "CRM" }, { label: "Import dat" }]}
       />
       <div className="p-6">

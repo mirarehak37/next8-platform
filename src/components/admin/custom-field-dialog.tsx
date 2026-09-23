@@ -15,7 +15,7 @@ import { Plus, Trash2 } from "lucide-react";
 type FormValues = { entityType: string; key: string; label: string; fieldType: string; options?: string };
 
 const ENTITY_OPTIONS = [
-  { value: "company", label: "Firma" },
+  { value: "company", label: "Klub" },
   { value: "contact", label: "Kontakt" },
   { value: "lead", label: "Lead" },
   { value: "deal", label: "Obchodní případ" },

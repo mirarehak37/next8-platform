@@ -159,6 +159,19 @@ export const PRODUCT_CATEGORIES = [
   "Předplatné",
 ] as const;
 
+// Dnes výhradně florbal, ale klientská základna se má rozšiřovat na další sporty —
+// proto je pole u klubu kombobox s možností dopsat vlastní hodnotu, ne pevný enum.
+export const SPORTS = [
+  "Florbal",
+  "Fotbal",
+  "Hokej",
+  "Basketbal",
+  "Volejbal",
+  "Házená",
+  "Tenis",
+  "Jiné",
+] as const;
+
 export const PRODUCT_UNITS = [
   { value: "ks", label: "ks" },
   { value: "hod", label: "hod" },

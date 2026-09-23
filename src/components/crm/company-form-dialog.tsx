@@ -18,7 +18,7 @@ import {
 import { FormSelect } from "@/components/form-select";
 import { FormCombobox } from "@/components/form-combobox";
 import { Plus, Pencil } from "lucide-react";
-import { COMPANY_STATUSES, COMPANY_SIZE_BANDS, LEAD_SOURCES, INDUSTRIES } from "@/lib/constants";
+import { COMPANY_STATUSES, COMPANY_SIZE_BANDS, LEAD_SOURCES, INDUSTRIES, SPORTS } from "@/lib/constants";
 
 type Owner = { id: string; name: string };
 
@@ -46,10 +46,10 @@ export function CompanyFormDialog({
     try {
       if (isEdit) {
         await updateCompany(company!.id, data);
-        toast.success("Firma byla upravena.");
+        toast.success("Klub byl upraven.");
       } else {
         await createCompany(data);
-        toast.success("Firma byla vytvořena.");
+        toast.success("Klub byl vytvořen.");
         reset();
       }
       setOpen(false);
@@ -69,19 +69,19 @@ export function CompanyFormDialog({
             (trigger as React.ReactElement)
           ) : (
             <Button size="sm">
-              <Plus className="h-4 w-4" /> Nová firma
+              <Plus className="h-4 w-4" /> Nový klub
             </Button>
           )
         }
       />
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Upravit firmu" : "Nová firma"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Upravit klub" : "Nový klub"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 space-y-1.5">
-              <Label>Název firmy *</Label>
+              <Label>Název klubu *</Label>
               <Input {...register("name")} />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
@@ -116,6 +116,20 @@ export function CompanyFormDialog({
                   />
                 )}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Sport</Label>
+              <Controller
+                control={control}
+                name="sport"
+                render={({ field }) => (
+                  <FormCombobox value={field.value} onChange={field.onChange} options={SPORTS.map((s) => ({ value: s, label: s }))} placeholder="Vyberte sport" creatable allowClear />
+                )}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Liga / soutěž</Label>
+              <Input {...register("league")} placeholder="Např. Extraliga, 1. liga muži" />
             </div>
             <div className="space-y-1.5">
               <Label>Obor</Label>
@@ -180,7 +194,7 @@ export function CompanyFormDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Ukládám…" : isEdit ? "Uložit změny" : "Vytvořit firmu"}
+              {isSubmitting ? "Ukládám…" : isEdit ? "Uložit změny" : "Vytvořit klub"}
             </Button>
           </DialogFooter>
         </form>

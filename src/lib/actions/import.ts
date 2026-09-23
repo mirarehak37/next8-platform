@@ -25,7 +25,7 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
       const r = rows[i];
       if (!r.name?.trim()) {
         result.skipped++;
-        result.errors.push({ row: i + 1, reason: "Chybí povinné pole „Název firmy“." });
+        result.errors.push({ row: i + 1, reason: "Chybí povinné pole „Název klubu“." });
         continue;
       }
       await prisma.company.create({
@@ -35,6 +35,8 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
           registrationNumber: r.registrationNumber || undefined,
           vatNumber: r.vatNumber || undefined,
           industry: r.industry || undefined,
+          sport: r.sport || undefined,
+          league: r.league || undefined,
           segment: r.segment || undefined,
           website: r.website || undefined,
           phone: r.phone || undefined,
@@ -86,7 +88,7 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
       const r = rows[i];
       if (!r.lastName?.trim() && !r.companyName?.trim()) {
         result.skipped++;
-        result.errors.push({ row: i + 1, reason: "Chybí příjmení i název firmy — lead nelze pojmenovat." });
+        result.errors.push({ row: i + 1, reason: "Chybí příjmení i název klubu — lead nelze pojmenovat." });
         continue;
       }
       await prisma.lead.create({

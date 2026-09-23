@@ -32,7 +32,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const totalResults = companies.length + contacts.length + deals.length + leads.length + tasks.length + quotes.length;
 
   const sections = [
-    { title: "Firmy", icon: Building2, items: companies.map((c) => ({ id: c.id, label: c.name, href: `/crm/companies/${c.id}` })) },
+    { title: "Kluby", icon: Building2, items: companies.map((c) => ({ id: c.id, label: c.name, href: `/crm/companies/${c.id}` })) },
     { title: "Kontakty", icon: Users, items: contacts.map((c) => ({ id: c.id, label: `${c.firstName} ${c.lastName}`, href: `/crm/contacts/${c.id}` })) },
     { title: "Obchodní případy", icon: Handshake, items: deals.map((d) => ({ id: d.id, label: d.name, href: `/crm/deals/${d.id}` })) },
     { title: "Leady", icon: UserPlus, items: leads.map((l) => ({ id: l.id, label: `${l.firstName ?? ""} ${l.lastName ?? ""}`.trim() || l.companyName || "Lead", href: `/crm/leads` })) },

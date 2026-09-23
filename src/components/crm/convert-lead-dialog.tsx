@@ -27,7 +27,7 @@ export function ConvertLeadDialog({
     setPending(true);
     try {
       await convertLead(leadId, pipelineId, firstStageId);
-      toast.success("Lead byl převeden na firmu, kontakt a obchodní případ.");
+      toast.success("Lead byl převeden na klub, kontakt a obchodní případ.");
       setOpen(false);
       router.refresh();
     } catch (e) {

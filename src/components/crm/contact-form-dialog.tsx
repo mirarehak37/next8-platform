@@ -123,12 +123,12 @@ export function ContactFormDialog({
               />
             </div>
             <div className="col-span-2 space-y-1.5">
-              <Label>Firma</Label>
+              <Label>Klub</Label>
               <Controller
                 control={control}
                 name="companyId"
                 render={({ field }) => (
-                  <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez firmy" allowClear clearLabel="Bez firmy" />
+                  <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez klubu" allowClear clearLabel="Bez klubu" />
                 )}
               />
             </div>

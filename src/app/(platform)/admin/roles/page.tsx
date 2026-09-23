@@ -7,7 +7,7 @@ import { Check } from "lucide-react";
 import { ROLE_MATRIX, ROLE_NAMES, type ModuleResource } from "@/lib/rbac";
 
 const RESOURCE_LABELS: Record<ModuleResource, string> = {
-  dashboard: "Dashboard", company: "Firmy", contact: "Kontakty", lead: "Leady", deal: "Obchody",
+  dashboard: "Dashboard", company: "Kluby", contact: "Kontakty", lead: "Leady", deal: "Obchody",
   product: "Produkty", quote: "Nabídky", activity: "Aktivity", task: "Úkoly", report: "Reporty", roadmap: "Roadmap", admin: "Administrace",
 };
 

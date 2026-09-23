@@ -83,7 +83,7 @@ export function Sidebar({
                 <div
                   key={m.name}
                   className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-neutral-600 cursor-not-allowed"
-                  title="Modul zatím není aktivován pro tuto firmu"
+                  title="Modul zatím není aktivován pro tento klub"
                 >
                   <LockKeyhole className="h-3.5 w-3.5 shrink-0" />
                   {m.name}

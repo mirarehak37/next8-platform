@@ -43,7 +43,7 @@ export function LeadsTable({
   const columns = useMemo<ColumnDef<LeadRow, unknown>[]>(
     () => [
       { accessorKey: "name", header: ({ column }) => <DataTableColumnHeader column={column} title="Jméno" />, meta: { label: "Jméno" }, cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
-      { accessorKey: "companyName", header: "Firma", meta: { label: "Firma" }, cell: ({ row }) => row.original.companyName ?? "—" },
+      { accessorKey: "companyName", header: "Klub", meta: { label: "Klub" }, cell: ({ row }) => row.original.companyName ?? "—" },
       { accessorKey: "email", header: "E-mail", meta: { label: "E-mail" }, cell: ({ row }) => row.original.email ?? "—" },
       { accessorKey: "source", header: "Zdroj", meta: { label: "Zdroj" }, cell: ({ row }) => row.original.source ?? "—" },
       {

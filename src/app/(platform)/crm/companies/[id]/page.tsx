@@ -61,7 +61,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
     <div>
       <PageHeader
         title={company.name}
-        breadcrumbs={[{ label: "CRM" }, { label: "Firmy", href: "/crm/companies" }, { label: company.name }]}
+        breadcrumbs={[{ label: "CRM" }, { label: "Kluby", href: "/crm/companies" }, { label: company.name }]}
         actions={
           <CompanyFormDialog
             owners={owners}
@@ -75,6 +75,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
               status: company.status,
               segment: company.segment,
               industry: company.industry,
+              sport: company.sport,
+              league: company.league,
               sizeBand: company.sizeBand,
               website: company.website,
               phone: company.phone,
@@ -107,6 +109,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
+                  {company.sport && <span>{company.sport}</span>}
+                  {company.league && <span>{company.league}</span>}
                   {company.industry && <span>{company.industry}</span>}
                   {company.registrationNumber && <span>IČO: {company.registrationNumber}</span>}
                   {company.vatNumber && <span>DIČ: {company.vatNumber}</span>}
@@ -164,6 +168,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           <TabsContent value="overview" className="pt-4">
             <Card>
               <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                <div><div className="text-muted-foreground text-xs mb-1">Sport</div>{company.sport ?? "—"}</div>
+                <div><div className="text-muted-foreground text-xs mb-1">Liga / soutěž</div>{company.league ?? "—"}</div>
                 <div><div className="text-muted-foreground text-xs mb-1">Segment</div>{company.segment ?? "—"}</div>
                 <div><div className="text-muted-foreground text-xs mb-1">Zdroj</div>{company.source ?? "—"}</div>
                 <div><div className="text-muted-foreground text-xs mb-1">Roční obrat</div>{company.annualRevenue ? formatCurrency(company.annualRevenue) : "—"}</div>
@@ -288,7 +294,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           <TabsContent value="documents" className="pt-4">
             <Card>
               <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Modul Dokumenty (DMS) zatím není pro tuto firmu aktivován.
+                Modul Dokumenty (DMS) zatím není pro tento klub aktivován.
                 <br />
                 Přílohy jednotlivých záznamů jsou podporovány napříč platformou a připraveny na plnohodnotný DMS modul.
                 <div className="mt-3">

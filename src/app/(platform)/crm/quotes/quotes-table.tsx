@@ -37,7 +37,7 @@ export function QuotesTable({
   const columns = useMemo<ColumnDef<QuoteRow, unknown>[]>(
     () => [
       { accessorKey: "number", header: ({ column }) => <DataTableColumnHeader column={column} title="Číslo" />, meta: { label: "Číslo" }, cell: ({ row }) => <Link href={`/crm/quotes/${row.original.id}`} className="font-medium hover:underline">{row.original.number}</Link> },
-      { accessorKey: "companyName", header: "Firma", meta: { label: "Firma" }, cell: ({ row }) => row.original.companyName ?? "—" },
+      { accessorKey: "companyName", header: "Klub", meta: { label: "Klub" }, cell: ({ row }) => row.original.companyName ?? "—" },
       { accessorKey: "total", header: ({ column }) => <DataTableColumnHeader column={column} title="Celkem" />, meta: { label: "Celkem" }, cell: ({ row }) => formatCurrency(row.original.total, row.original.currency) },
       { accessorKey: "validUntil", header: "Platnost do", meta: { label: "Platnost" }, cell: ({ row }) => formatDate(row.original.validUntil) },
       {

@@ -9,6 +9,8 @@ export const companySchema = z.object({
   status: z.string().default("prospect"),
   segment: z.string().optional().nullable(),
   industry: z.string().optional().nullable(),
+  sport: z.string().optional().nullable(),
+  league: z.string().optional().nullable(),
   sizeBand: z.string().optional().nullable(),
   website: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),

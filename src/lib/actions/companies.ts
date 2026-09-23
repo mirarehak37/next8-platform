@@ -22,7 +22,7 @@ export async function updateCompany(id: string, data: unknown) {
   const parsed = companySchema.partial().parse(data);
 
   const existing = await prisma.company.findFirst({ where: { id, tenantId: user.tenantId } });
-  if (!existing) throw new ActionError("Firma nenalezena.");
+  if (!existing) throw new ActionError("Klub nenalezen.");
 
   const company = await prisma.company.update({ where: { id }, data: parsed });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "company", entityId: id, action: "update", changes: parsed });
@@ -34,7 +34,7 @@ export async function updateCompany(id: string, data: unknown) {
 export async function deleteCompany(id: string) {
   const user = await requirePermission("company", "delete");
   const existing = await prisma.company.findFirst({ where: { id, tenantId: user.tenantId } });
-  if (!existing) throw new ActionError("Firma nenalezena.");
+  if (!existing) throw new ActionError("Klub nenalezen.");
 
   await prisma.company.delete({ where: { id } });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "company", entityId: id, action: "delete" });

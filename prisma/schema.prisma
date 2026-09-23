@@ -479,6 +479,8 @@ model Company {
   status             String   @default("active") // prospect | active | inactive | lost
   segment            String?
   industry           String?
+  sport              String? // floorball, fotbal, hokej… (rozšiřitelné, klub může časem mít víc sportů)
+  league             String? // liga/soutěž, ve které klub aktuálně hraje
   sizeBand           String? // 1-10, 11-50, 51-200, 201-1000, 1000+
   employeeCount      Int?
   annualRevenue      Float?
@@ -510,6 +512,8 @@ model Company {
 
   @@index([tenantId, status])
   @@index([tenantId, name])
+  @@index([tenantId, sport])
+  @@index([tenantId, league])
 }
 
 model Contact {

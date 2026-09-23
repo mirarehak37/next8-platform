@@ -52,7 +52,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   // Revenue by customer
   const byCustomer = new Map<string, number>();
   for (const d of wonDeals) {
-    const name = d.company?.name ?? "Bez firmy";
+    const name = d.company?.name ?? "Bez klubu";
     byCustomer.set(name, (byCustomer.get(name) ?? 0) + d.value);
   }
   const customerData = Array.from(byCustomer.entries()).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8);

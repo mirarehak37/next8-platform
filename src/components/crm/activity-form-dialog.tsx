@@ -81,7 +81,7 @@ export function ActivityFormDialog({
               <Controller
                 control={control}
                 name="subjectType"
-                render={({ field }) => <FormSelect value={field.value} onChange={field.onChange} options={[{ value: "company", label: "Firma" }, { value: "deal", label: "Obchodní případ" }]} placeholder="Bez vazby" />}
+                render={({ field }) => <FormSelect value={field.value} onChange={field.onChange} options={[{ value: "company", label: "Klub" }, { value: "deal", label: "Obchodní případ" }]} placeholder="Bez vazby" />}
               />
             </div>
             <div className="space-y-1.5">

@@ -45,7 +45,7 @@ export function ContactsTable({
         ),
       },
       { accessorKey: "jobTitle", header: "Pozice", meta: { label: "Pozice" }, cell: ({ row }) => row.original.jobTitle ?? "—" },
-      { accessorKey: "companyName", header: "Firma", meta: { label: "Firma" }, cell: ({ row }) => row.original.companyName ?? "—" },
+      { accessorKey: "companyName", header: "Klub", meta: { label: "Klub" }, cell: ({ row }) => row.original.companyName ?? "—" },
       { accessorKey: "email", header: "E-mail", meta: { label: "E-mail" }, cell: ({ row }) => row.original.email ?? "—" },
       { accessorKey: "phone", header: "Telefon", meta: { label: "Telefon" }, cell: ({ row }) => row.original.phone ?? "—" },
       {

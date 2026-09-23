@@ -15,6 +15,8 @@ export type CompanyRow = {
   id: string;
   name: string;
   industry: string | null;
+  sport: string | null;
+  league: string | null;
   segment: string | null;
   status: string;
   city: string | null;
@@ -26,17 +28,42 @@ export type CompanyRow = {
 };
 
 export function CompaniesTable({ data, owners }: { data: CompanyRow[]; owners: { id: string; name: string }[] }) {
+  // Built from the data itself, not a fixed enum — sport/league are creatable
+  // combobox fields, so the filter should offer whatever clubs actually have set.
+  const sportOptions = useMemo(
+    () => Array.from(new Set(data.map((d) => d.sport).filter((v): v is string => !!v))).sort().map((v) => ({ value: v, label: v })),
+    [data],
+  );
+  const leagueOptions = useMemo(
+    () => Array.from(new Set(data.map((d) => d.league).filter((v): v is string => !!v))).sort().map((v) => ({ value: v, label: v })),
+    [data],
+  );
+
   const columns = useMemo<ColumnDef<CompanyRow, unknown>[]>(
     () => [
       {
         accessorKey: "name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Firma" />,
-        meta: { label: "Firma" },
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Klub" />,
+        meta: { label: "Klub" },
         cell: ({ row }) => (
           <Link href={`/crm/companies/${row.original.id}`} className="font-medium hover:underline text-foreground">
             {row.original.name}
           </Link>
         ),
+      },
+      {
+        accessorKey: "sport",
+        header: "Sport",
+        meta: { label: "Sport" },
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.sport ?? "—"}</span>,
+        filterFn: (row, id, value) => value === "all" || row.getValue(id) === value,
+      },
+      {
+        accessorKey: "league",
+        header: "Liga",
+        meta: { label: "Liga" },
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.league ?? "—"}</span>,
+        filterFn: (row, id, value) => value === "all" || row.getValue(id) === value,
       },
       {
         accessorKey: "industry",
@@ -97,10 +124,14 @@ export function CompaniesTable({ data, owners }: { data: CompanyRow[]; owners: {
     <DataTable
       columns={columns}
       data={data}
-      searchPlaceholder="Hledat firmy podle názvu, oboru…"
-      exportFilename="firmy"
-      emptyMessage="Zatím žádné firmy. Vytvořte první záznam."
-      facets={[{ columnId: "status", title: "Stav", options: COMPANY_STATUSES.map((s) => ({ value: s.value, label: s.label })) }]}
+      searchPlaceholder="Hledat kluby podle názvu, sportu…"
+      exportFilename="kluby"
+      emptyMessage="Zatím žádné kluby. Vytvořte první záznam."
+      facets={[
+        { columnId: "status", title: "Stav", options: COMPANY_STATUSES.map((s) => ({ value: s.value, label: s.label })) },
+        { columnId: "sport", title: "Sport", options: sportOptions },
+        { columnId: "league", title: "Liga", options: leagueOptions },
+      ]}
       toolbarActions={<CompanyFormDialog owners={owners} />}
     />
   );

@@ -45,7 +45,7 @@ export function Topbar({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Hledat firmy, kontakty, obchody…"
+          placeholder="Hledat kluby, kontakty, obchody…"
           className="pl-8 h-9 bg-muted/40 border-none"
         />
       </form>

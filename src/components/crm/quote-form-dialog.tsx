@@ -71,7 +71,7 @@ export function QuoteFormDialog({ companies, deals, products, contacts = [] }: {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Firma</Label>
+              <Label>Klub</Label>
               <Controller control={control} name="companyId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Vyberte…" allowClear />} />
             </div>
             <div className="space-y-1.5">

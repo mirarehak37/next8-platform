@@ -67,7 +67,7 @@ export function LeadFormDialog({ owners, lead, trigger }: { owners: Owner[]; lea
               <Input {...register("lastName")} />
             </div>
             <div className="col-span-2 space-y-1.5">
-              <Label>Firma</Label>
+              <Label>Klub</Label>
               <Input {...register("companyName")} />
             </div>
             <div className="space-y-1.5">

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/status-badge";
 import { CustomFieldDialog, DeleteCustomFieldButton } from "@/components/admin/custom-field-dialog";
 
-const ENTITY_LABELS: Record<string, string> = { company: "Firma", contact: "Kontakt", lead: "Lead", deal: "Obchodní případ" };
+const ENTITY_LABELS: Record<string, string> = { company: "Klub", contact: "Kontakt", lead: "Lead", deal: "Obchodní případ" };
 const FIELD_TYPE_LABELS: Record<string, string> = { text: "Text", number: "Číslo", date: "Datum", boolean: "Ano/Ne", select: "Výběr", multiselect: "Výběr (více)", currency: "Měna" };
 
 export default async function CustomFieldsPage() {

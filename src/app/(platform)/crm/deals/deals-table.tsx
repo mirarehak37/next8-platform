@@ -31,7 +31,7 @@ export function DealsTable({ data }: { data: DealRow[] }) {
         meta: { label: "Název" },
         cell: ({ row }) => <Link href={`/crm/deals/${row.original.id}`} className="font-medium hover:underline">{row.original.name}</Link>,
       },
-      { accessorKey: "companyName", header: "Firma", meta: { label: "Firma" }, cell: ({ row }) => row.original.companyName ?? "—" },
+      { accessorKey: "companyName", header: "Klub", meta: { label: "Klub" }, cell: ({ row }) => row.original.companyName ?? "—" },
       { accessorKey: "stageName", header: "Fáze", meta: { label: "Fáze" } },
       {
         accessorKey: "value",

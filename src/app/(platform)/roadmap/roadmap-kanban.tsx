@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DndContext, DragEndEvent, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { toast } from "sonner";
@@ -25,6 +25,10 @@ export function RoadmapKanban({
   const router = useRouter();
   const [items, setItems] = useState(data);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  useEffect(() => {
+    setItems(data);
+  }, [data]);
 
   const byStatus = useMemo(() => {
     const map = new Map<string, RoadmapItemRow[]>();

@@ -36,11 +36,11 @@ function LoginForm() {
             Modulární business platforma pro digitalizaci vaší firmy.
           </h1>
           <p className="text-neutral-400">
-            CRM je první modul. Firmy, kontakty, obchodní případy, nabídky a úkoly na jednom místě —
+            CRM je první modul. Kluby, kontakty, obchodní případy, nabídky a úkoly na jednom místě —
             připraveno na Faktury, Projekty, HelpDesk a další agendy.
           </p>
           <div className="grid grid-cols-2 gap-4 text-sm text-neutral-300">
-            <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-[#FF1947]" /> 360° pohled na firmy</div>
+            <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-[#FF1947]" /> 360° pohled na kluby</div>
             <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#FF1947]" /> Kontakty a role</div>
             <div className="flex items-center gap-2"><Target className="h-4 w-4 text-[#FF1947]" /> Kanban pipeline</div>
             <div className="flex items-center gap-2"><CheckSquare className="h-4 w-4 text-[#FF1947]" /> Úkoly a aktivity</div>

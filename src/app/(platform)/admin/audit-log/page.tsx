@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatDateTime } from "@/lib/format";
 
 const ENTITY_LABELS: Record<string, string> = {
-  company: "Firma", contact: "Kontakt", lead: "Lead", deal: "Obchodní případ", quote: "Nabídka",
+  company: "Klub", contact: "Kontakt", lead: "Lead", deal: "Obchodní případ", quote: "Nabídka",
   product: "Produkt", task: "Úkol", activity: "Aktivita", user: "Uživatel", module: "Modul",
 };
 const ACTION_META: Record<string, { label: string; color: string }> = {

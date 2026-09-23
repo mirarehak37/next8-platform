@@ -87,8 +87,8 @@ export function DealFormDialog({
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Firma</Label>
-              <Controller control={control} name="companyId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez firmy" allowClear clearLabel="Bez firmy" />} />
+              <Label>Klub</Label>
+              <Controller control={control} name="companyId" render={({ field }) => <FormCombobox value={field.value} onChange={field.onChange} options={companies.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez klubu" allowClear clearLabel="Bez klubu" />} />
             </div>
             <div className="space-y-1.5">
               <Label>Hodnota *</Label>
