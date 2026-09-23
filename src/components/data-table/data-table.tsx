@@ -171,13 +171,30 @@ export function DataTable<TData>({
           {table.getFilteredRowModel().rows.length} záznamů · stránka {table.getState().pagination.pageIndex + 1} z{" "}
           {table.getPageCount() || 1}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
+        <div className="flex items-center gap-3">
+          <Select
+            items={{ "15": "15 / str.", "50": "50 / str.", "100": "100 / str.", "999999": "Zobrazit vše" }}
+            value={String(Math.min(table.getState().pagination.pageSize, 999999))}
+            onValueChange={(v) => table.setPageSize(Number(v))}
+          >
+            <SelectTrigger className="h-9 w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="15">15 / str.</SelectItem>
+              <SelectItem value="50">50 / str.</SelectItem>
+              <SelectItem value="100">100 / str.</SelectItem>
+              <SelectItem value="999999">Zobrazit vše</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
