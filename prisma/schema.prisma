@@ -1,0 +1,850 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Postgres in every environment (Vercel's serverless functions have no writable local
+  // disk, so SQLite can't be used there). Point DATABASE_URL at the same cloud database
+  // locally too — e.g. the Neon/Vercel Postgres instance created for this project.
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================================================================
+// CORE PLATFORM LAYER — shared by every module (CRM today, others later).
+// =========================================================================
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  legalName String?
+  plan      String   @default("business")
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  teams           Team[]
+  roles           Role[]
+  tenantModules   TenantModule[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  tags            Tag[]
+  customFields    CustomFieldDefinition[]
+  picklists       Picklist[]
+  savedViews      SavedView[]
+  workflowRules   WorkflowRule[]
+  approvalFlows   ApprovalFlow[]
+  numberSequences NumberSequence[]
+
+  companies    Company[]
+  contacts     Contact[]
+  leads        Lead[]
+  pipelines    Pipeline[]
+  deals        Deal[]
+  products     Product[]
+  quotes       Quote[]
+  activities   Activity[]
+  tasks        Task[]
+  roadmapItems RoadmapItem[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  tenantId     String
+  email        String    @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  jobTitle     String?
+  phone        String?
+  status       String    @default("active") // active | invited | disabled
+  locale       String    @default("cs")
+  timezone     String    @default("Europe/Prague")
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  teamMemberships TeamMember[]
+  userRoles       UserRole[]
+
+  ownedCompanies Company[] @relation("CompanyOwner")
+  ownedContacts  Contact[] @relation("ContactOwner")
+  ownedLeads     Lead[]    @relation("LeadOwner")
+  ownedDeals     Deal[]    @relation("DealOwner")
+  ownedQuotes    Quote[]   @relation("QuoteOwner")
+
+  ownedActivities Activity[] @relation("ActivityOwner")
+  assignedTasks   Task[]     @relation("TaskAssignee")
+  createdTasks    Task[]     @relation("TaskCreator")
+
+  ownedRoadmapItems   RoadmapItem[] @relation("RoadmapOwner")
+  createdRoadmapItems RoadmapItem[] @relation("RoadmapCreator")
+
+  comments      Comment[]
+  attachments   Attachment[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  savedViews    SavedView[]
+
+  @@index([tenantId])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members TeamMember[]
+
+  @@index([tenantId])
+}
+
+model TeamMember {
+  id         String @id @default(cuid())
+  teamId     String
+  userId     String
+  roleInTeam String @default("member") // lead | member
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@unique([tenantId, name])
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+// Catalog of grantable permissions, e.g. "crm.company.edit"
+model Permission {
+  id       String @id @default(cuid())
+  code     String @unique
+  module   String // crm | platform | invoices ...
+  resource String // company | contact | deal ...
+  action   String // view | create | edit | delete | export | approve | admin
+  label    String
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+  scope        String @default("all") // own | team | department | all
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+// Registry of every module the platform can offer. New modules register here.
+model Module {
+  id          String  @id @default(cuid())
+  code        String  @unique // crm | invoices | projects | helpdesk | hr ...
+  name        String
+  description String?
+  icon        String  @default("box")
+  isCore      Boolean @default(false)
+  route       String
+  order       Int     @default(0)
+
+  tenantModules TenantModule[]
+  roadmapItems  RoadmapItem[]
+}
+
+model TenantModule {
+  id        String   @id @default(cuid())
+  tenantId  String
+  moduleId  String
+  enabled   Boolean  @default(true)
+  enabledAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, moduleId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String?
+  entityType String
+  entityId   String
+  action     String // create | update | delete | status_change | login ...
+  changes    String? // JSON-serialized diff
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, createdAt])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  type       String
+  title      String
+  body       String?
+  entityType String?
+  entityId   String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, isRead])
+}
+
+// Polymorphic comment usable on any entity across any module.
+model Comment {
+  id         String   @id @default(cuid())
+  tenantId   String
+  entityType String
+  entityId   String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  entityType   String
+  entityId     String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  category     String?
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+}
+
+model Tag {
+  id       String @id @default(cuid())
+  tenantId String
+  name     String
+  color    String @default("gray")
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  TaggedItem[]
+
+  @@unique([tenantId, name])
+}
+
+model TaggedItem {
+  id         String   @id @default(cuid())
+  tagId      String
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+model CustomFieldDefinition {
+  id         String  @id @default(cuid())
+  tenantId   String
+  entityType String
+  key        String
+  label      String
+  fieldType  String // text | number | date | boolean | select | multiselect | currency
+  options    String? // JSON array for select/multiselect
+  isRequired Boolean @default(false)
+  order      Int     @default(0)
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  values CustomFieldValue[]
+
+  @@unique([tenantId, entityType, key])
+}
+
+model CustomFieldValue {
+  id           String  @id @default(cuid())
+  definitionId String
+  entityId     String
+  value        String?
+
+  definition CustomFieldDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  @@unique([definitionId, entityId])
+}
+
+model Picklist {
+  id       String @id @default(cuid())
+  tenantId String
+  code     String
+  label    String
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  values PicklistValue[]
+
+  @@unique([tenantId, code])
+}
+
+model PicklistValue {
+  id         String  @id @default(cuid())
+  picklistId String
+  value      String
+  label      String
+  color      String?
+  order      Int     @default(0)
+  isActive   Boolean @default(true)
+
+  picklist Picklist @relation(fields: [picklistId], references: [id], onDelete: Cascade)
+}
+
+model SavedView {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  entityType String
+  name       String
+  filters    String // JSON
+  sort       String? // JSON
+  columns    String? // JSON
+  isShared   Boolean  @default(false)
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entityType])
+}
+
+// Generic workflow engine skeleton: TRIGGER -> CONDITION -> ACTION, reusable by any module.
+model WorkflowRule {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  description   String?
+  entityType    String
+  triggerType   String // on_create | on_update | on_status_change | time_based | manual
+  triggerConfig String // JSON
+  conditions    String? // JSON (AND/OR tree)
+  actions       String // JSON (ordered list of actions)
+  isActive      Boolean  @default(true)
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runs   WorkflowRun[]
+
+  @@index([tenantId, entityType])
+}
+
+model WorkflowRun {
+  id         String   @id @default(cuid())
+  ruleId     String
+  entityType String
+  entityId   String
+  status     String // success | failed | skipped
+  resultLog  String? // JSON
+  runAt      DateTime @default(now())
+
+  rule WorkflowRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+}
+
+// Generic approval engine skeleton, reusable by Invoices/Orders/HR later.
+model ApprovalFlow {
+  id               String  @id @default(cuid())
+  tenantId         String
+  name             String
+  entityType       String
+  triggerCondition String? // JSON
+  isActive         Boolean @default(true)
+
+  tenant   Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  steps    ApprovalStepDefinition[]
+  requests ApprovalRequest[]
+}
+
+model ApprovalStepDefinition {
+  id           String  @id @default(cuid())
+  flowId       String
+  order        Int
+  name         String
+  approverType String // user | role | manager
+  approverId   String?
+  isParallel   Boolean @default(false)
+
+  flow ApprovalFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+}
+
+model ApprovalRequest {
+  id            String    @id @default(cuid())
+  tenantId      String
+  flowId        String
+  entityType    String
+  entityId      String
+  status        String    @default("pending") // pending | approved | rejected | cancelled
+  requestedById String
+  createdAt     DateTime  @default(now())
+  decidedAt     DateTime?
+
+  flow  ApprovalFlow           @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  steps ApprovalStepInstance[]
+
+  @@index([tenantId, entityType, entityId])
+}
+
+model ApprovalStepInstance {
+  id               String    @id @default(cuid())
+  requestId        String
+  stepDefinitionId String
+  approverId       String?
+  status           String    @default("pending") // pending | approved | rejected | skipped
+  decidedAt        DateTime?
+  comment          String?
+
+  request ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model NumberSequence {
+  id         String @id @default(cuid())
+  tenantId   String
+  code       String // quote | invoice | order ...
+  prefix     String @default("")
+  nextNumber Int    @default(1)
+  format     String @default("{prefix}{year}-{number:04d}")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+}
+
+// =========================================================================
+// CRM MODULE
+// =========================================================================
+
+model Company {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  name               String
+  legalName          String?
+  registrationNumber String? // IČO
+  vatNumber          String? // DIČ
+  companyType        String? // s.r.o. | a.s. | OSVC ...
+  status             String   @default("active") // prospect | active | inactive | lost
+  segment            String?
+  industry           String?
+  sizeBand           String? // 1-10, 11-50, 51-200, 201-1000, 1000+
+  employeeCount      Int?
+  annualRevenue      Float?
+  website            String?
+  phone              String?
+  email              String?
+  billingStreet      String?
+  billingCity        String?
+  billingZip         String?
+  billingCountry     String   @default("Česká republika")
+  shippingStreet     String?
+  shippingCity       String?
+  shippingZip        String?
+  shippingCountry    String?
+  source             String?
+  ownerId            String
+  teamId             String?
+  description        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User   @relation("CompanyOwner", fields: [ownerId], references: [id])
+
+  contacts CompanyContact[]
+  leads    Lead[]
+  deals    Deal[]
+  quotes   Quote[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, name])
+}
+
+model Contact {
+  id               String   @id @default(cuid())
+  tenantId         String
+  firstName        String
+  lastName         String
+  titleBefore      String?
+  titleAfter       String?
+  jobTitle         String?
+  department       String?
+  email            String?
+  phone            String?
+  mobile           String?
+  linkedin         String?
+  addressStreet    String?
+  addressCity      String?
+  addressZip       String?
+  addressCountry   String?
+  preferredContact String   @default("email") // email | phone | mobile
+  ownerId          String
+  status           String   @default("active")
+  source           String?
+  gdprConsent      Boolean  @default(false)
+  marketingConsent Boolean  @default(false)
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User   @relation("ContactOwner", fields: [ownerId], references: [id])
+
+  companies    CompanyContact[]
+  dealContacts DealContact[]
+  leads        Lead[]
+  quotes       Quote[]
+
+  @@index([tenantId, lastName])
+}
+
+model CompanyContact {
+  id        String  @id @default(cuid())
+  companyId String
+  contactId String
+  role      String?
+  isPrimary Boolean @default(false)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, contactId])
+}
+
+model Lead {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  firstName          String?
+  lastName           String?
+  companyName        String?
+  jobTitle           String?
+  email              String?
+  phone              String?
+  source             String?
+  campaign           String?
+  productInterest    String?
+  estimatedValue     Float?
+  ownerId            String
+  status             String   @default("new") // new | to_contact | contacted | qualifying | qualified | unqualified | converted
+  rating             String? // hot | warm | cold
+  notes              String?
+  convertedCompanyId String?
+  convertedContactId String?
+  convertedDealId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner   User     @relation("LeadOwner", fields: [ownerId], references: [id])
+  company Company? @relation(fields: [convertedCompanyId], references: [id])
+  contact Contact? @relation(fields: [convertedContactId], references: [id])
+
+  @@index([tenantId, status])
+}
+
+model Pipeline {
+  id        String  @id @default(cuid())
+  tenantId  String
+  name      String
+  isDefault Boolean @default(false)
+  order     Int     @default(0)
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages PipelineStage[]
+  deals  Deal[]
+}
+
+model PipelineStage {
+  id          String  @id @default(cuid())
+  pipelineId  String
+  name        String
+  order       Int
+  probability Int     @default(0)
+  isWon       Boolean @default(false)
+  isLost      Boolean @default(false)
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals    Deal[]
+}
+
+model Deal {
+  id                String    @id @default(cuid())
+  tenantId          String
+  name              String
+  companyId         String?
+  primaryContactId  String?
+  ownerId           String
+  teamId            String?
+  pipelineId        String
+  stageId           String
+  value             Float     @default(0)
+  currency          String    @default("CZK")
+  probability       Int?
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  status            String    @default("open") // open | won | lost
+  source            String?
+  competitor        String?
+  lossReason        String?
+  nextStep          String?
+  nextStepDate      DateTime?
+  description       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner    User          @relation("DealOwner", fields: [ownerId], references: [id])
+  company  Company?      @relation(fields: [companyId], references: [id])
+  pipeline Pipeline      @relation(fields: [pipelineId], references: [id])
+  stage    PipelineStage @relation(fields: [stageId], references: [id])
+
+  contacts DealContact[]
+  products DealProduct[]
+  quotes   Quote[]
+
+  @@index([tenantId, stageId])
+  @@index([tenantId, status])
+}
+
+model DealContact {
+  id        String  @id @default(cuid())
+  dealId    String
+  contactId String
+  role      String?
+
+  deal    Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, contactId])
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  code          String?
+  category      String?
+  description   String?
+  unit          String   @default("ks")
+  price         Float    @default(0)
+  currency      String   @default("CZK")
+  vatRate       Float    @default(21)
+  isRecurring   Boolean  @default(false)
+  billingPeriod String? // monthly | yearly
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  dealProducts DealProduct[]
+  quoteItems   QuoteItem[]
+
+  @@index([tenantId, isActive])
+}
+
+model DealProduct {
+  id        String  @id @default(cuid())
+  dealId    String
+  productId String?
+  name      String
+  quantity  Float   @default(1)
+  unitPrice Float
+  discount  Float   @default(0)
+  vatRate   Float   @default(21)
+  total     Float
+
+  deal    Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+}
+
+model Quote {
+  id         String    @id @default(cuid())
+  tenantId   String
+  number     String
+  dealId     String?
+  companyId  String?
+  contactId  String?
+  status     String    @default("draft") // draft | pending_approval | approved | sent | accepted | rejected | expired
+  validUntil DateTime?
+  currency   String    @default("CZK")
+  subtotal   Float     @default(0)
+  vatTotal   Float     @default(0)
+  total      Float     @default(0)
+  terms      String?
+  notes      String?
+  ownerId    String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner   User        @relation("QuoteOwner", fields: [ownerId], references: [id])
+  deal    Deal?       @relation(fields: [dealId], references: [id])
+  company Company?    @relation(fields: [companyId], references: [id])
+  contact Contact?    @relation(fields: [contactId], references: [id])
+  items   QuoteItem[]
+
+  @@unique([tenantId, number])
+}
+
+model QuoteItem {
+  id          String  @id @default(cuid())
+  quoteId     String
+  productId   String?
+  name        String
+  description String?
+  quantity    Float   @default(1)
+  unitPrice   Float
+  discount    Float   @default(0)
+  vatRate     Float   @default(21)
+  total       Float
+  order       Int     @default(0)
+
+  quote   Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+}
+
+// Unified activity timeline across the whole CRM (and future modules via subjectType).
+model Activity {
+  id              String   @id @default(cuid())
+  tenantId        String
+  type            String // call | email | meeting | video_call | note | presentation | other
+  subject         String
+  description     String?
+  subjectType     String? // company | contact | lead | deal
+  subjectId       String?
+  ownerId         String
+  direction       String? // inbound | outbound
+  outcome         String?
+  durationMinutes Int?
+  activityAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User   @relation("ActivityOwner", fields: [ownerId], references: [id])
+
+  @@index([tenantId, subjectType, subjectId])
+  @@index([tenantId, activityAt])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  tenantId    String
+  title       String
+  description String?
+  assigneeId  String
+  creatorId   String
+  dueDate     DateTime?
+  priority    String    @default("medium") // low | medium | high | urgent
+  status      String    @default("open") // open | in_progress | done | cancelled
+  subjectType String?
+  subjectId   String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignee User   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator  User   @relation("TaskCreator", fields: [creatorId], references: [id])
+
+  checklistItems TaskChecklistItem[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, subjectType, subjectId])
+}
+
+model TaskChecklistItem {
+  id     String  @id @default(cuid())
+  taskId String
+  label  String
+  isDone Boolean @default(false)
+  order  Int     @default(0)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+// =========================================================================
+// ROADMAP MODULE — internal product roadmap for this platform itself: ideas,
+// planned features, updates. Ships as its own module in the registry so it
+// follows the same activate/deactivate story as every other module.
+// =========================================================================
+
+model RoadmapItem {
+  id            String   @id @default(cuid())
+  tenantId      String
+  title         String
+  description   String?
+  type          String   @default("feature") // idea | feature | improvement | bug | update
+  status        String   @default("backlog") // backlog | considering | planned | in_progress | testing | done | rejected
+  priority      String   @default("medium") // low | medium | high | critical
+  effort        String? // s | m | l | xl
+  votes         Int      @default(0)
+  targetQuarter String?
+  moduleId      String?
+  parentId      String?
+  ownerId       String
+  createdById   String
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  module   Module?       @relation(fields: [moduleId], references: [id])
+  parent   RoadmapItem?  @relation("RoadmapTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children RoadmapItem[] @relation("RoadmapTree")
+  owner    User          @relation("RoadmapOwner", fields: [ownerId], references: [id])
+  creator  User          @relation("RoadmapCreator", fields: [createdById], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, parentId])
+}
