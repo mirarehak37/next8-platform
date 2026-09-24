@@ -72,6 +72,14 @@ export const dealSchema = z.object({
   nextStep: z.string().optional().nullable(),
   nextStepDate: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
+  clubTeamId: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
+  customPackage: z.string().optional().nullable(),
+  billingPeriod: z.string().optional().nullable(),
+  listPrice: z.preprocess((v) => (v === "" || v == null || Number.isNaN(v) ? null : v), z.coerce.number().min(0).nullable().optional()),
+  discountPercent: z.preprocess((v) => (v === "" || v == null || Number.isNaN(v) ? null : v), z.coerce.number().min(0).max(100).nullable().optional()),
+  ambassadorId: z.string().optional().nullable(),
+  commissionTermId: z.string().optional().nullable(),
 });
 export type DealInput = z.input<typeof dealSchema>;
 

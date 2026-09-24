@@ -57,7 +57,7 @@ export function RoadmapKanban({
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext id="roadmap-kanban" sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4">
         {ROADMAP_STATUSES.map((status) => (
           <Column key={status.value} id={status.value} title={status.label} count={(byStatus.get(status.value) ?? []).length}>

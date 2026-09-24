@@ -57,7 +57,8 @@ export function FulfillmentLedger({ terms, weGiveLabel, theyGiveLabel }: { terms
     .sort((a, b) => b.date.localeCompare(a.date));
   const year = new Date().getFullYear();
   const paidThisYear =
-    rows.filter((r) => r.direction === "we_give" && new Date(r.date).getFullYear() === year).reduce((s, r) => s + (r.amount ?? 0), 0) +
+    // Money we hand out directly; owed amounts (rewards, deal commissions) count once paid.
+    rows.filter((r) => r.direction === "we_give" && !r.rewardAmount && new Date(r.date).getFullYear() === year).reduce((s, r) => s + (r.amount ?? 0), 0) +
     rows.filter((r) => r.rewardAmount && r.paidAt && new Date(r.paidAt).getFullYear() === year).reduce((s, r) => s + (r.rewardAmount ?? 0), 0);
   const unpaid = rows.filter((r) => r.rewardAmount && !r.paidAt).reduce((s, r) => s + (r.rewardAmount ?? 0), 0);
   const receivedThisYear = rows

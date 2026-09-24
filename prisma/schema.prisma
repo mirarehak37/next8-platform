@@ -565,6 +565,7 @@ model ClubTeam {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   contacts ClubTeamContact[]
+  deals    Deal[]
 
   @@index([tenantId, companyId])
   @@index([tenantId, category])
@@ -717,14 +718,29 @@ model Deal {
   nextStep          String?
   nextStepDate      DateTime?
   description       String?
+  // What is being sold: a team + a package from the catalog (or a custom offer).
+  clubTeamId        String?
+  productId         String? // package (TEAM ONE ROČNÍ…); null + customPackage = individual offer
+  customPackage     String?
+  billingPeriod     String? // monthly | yearly
+  listPrice         Float? // package price before discount
+  discountPercent   Float? // e.g. 15 for an ambassador referral code
+  // Ambassador who brought the deal, and which of his commission terms applies
+  // (referral code 15 % / brokered by him 30 %…). Commission is paid on "won".
+  ambassadorId      String?
+  commissionTermId  String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  owner    User          @relation("DealOwner", fields: [ownerId], references: [id])
-  company  Company?      @relation(fields: [companyId], references: [id])
-  pipeline Pipeline      @relation(fields: [pipelineId], references: [id])
-  stage    PipelineStage @relation(fields: [stageId], references: [id])
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner          User             @relation("DealOwner", fields: [ownerId], references: [id])
+  company        Company?         @relation(fields: [companyId], references: [id])
+  clubTeam       ClubTeam?        @relation(fields: [clubTeamId], references: [id], onDelete: SetNull)
+  product        Product?         @relation("DealPackage", fields: [productId], references: [id], onDelete: SetNull)
+  ambassador     Ambassador?      @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+  commissionTerm PartnershipTerm? @relation(fields: [commissionTermId], references: [id], onDelete: SetNull)
+  pipeline       Pipeline         @relation(fields: [pipelineId], references: [id])
+  stage          PipelineStage    @relation(fields: [stageId], references: [id])
 
   contacts DealContact[]
   products DealProduct[]
@@ -765,6 +781,7 @@ model Product {
   tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   dealProducts DealProduct[]
   fulfillments PartnershipFulfillment[]
+  packageDeals Deal[]                   @relation("DealPackage")
   quoteItems   QuoteItem[]
 
   @@index([tenantId, isActive])
@@ -965,6 +982,7 @@ model Ambassador {
   updatedAt          DateTime  @updatedAt
 
   eventRegistrations EventRegistration[]
+  deals              Deal[]
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   owner   User     @relation("AmbassadorOwner", fields: [ownerId], references: [id])
@@ -1032,6 +1050,7 @@ model PartnershipTerm {
 
   tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fulfillments PartnershipFulfillment[]
+  deals        Deal[]
 
   @@index([tenantId, subjectType, subjectId])
 }
@@ -1050,6 +1069,7 @@ model PartnershipFulfillment {
   rewardAmount Float? // what we owe for this delivery (reward + bonus)
   paidAt       DateTime? // when the reward was paid out
   status       String    @default("done") // planned (content calendar) | done
+  dealId       String?   @unique // commission booked automatically from a won deal
   amount       Float?
   link         String?
   note         String?

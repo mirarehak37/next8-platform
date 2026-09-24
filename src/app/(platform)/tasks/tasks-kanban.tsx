@@ -48,7 +48,7 @@ export function TasksKanban({ data }: { data: TaskRow[] }) {
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext id="tasks-kanban" sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4">
         {TASK_STATUSES.map((status) => (
           <Column key={status.value} id={status.value} title={status.label} count={(byStatus.get(status.value) ?? []).length}>
