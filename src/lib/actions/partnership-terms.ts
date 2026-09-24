@@ -24,6 +24,12 @@ function revalidateSubject(subjectType: string, subjectId: string) {
   revalidatePath(`${base}/${subjectId}`);
 }
 
+async function assertProducts(tenantId: string, productIds: string[] | undefined) {
+  if (!productIds?.length) return;
+  const found = await prisma.product.count({ where: { tenantId, id: { in: productIds } } });
+  if (found !== new Set(productIds).size) throw new ActionError("Produkt nenalezen.");
+}
+
 // Loads a term and checks the caller may edit its parent record.
 async function requireTerm(termId: string) {
   const term = await prisma.partnershipTerm.findUnique({ where: { id: termId } });
@@ -37,6 +43,7 @@ export async function createPartnershipTerm(data: unknown) {
   const parsed = partnershipTermSchema.parse(data);
   const user = await requirePermission(parsed.subjectType, "edit");
   await assertSubject(user.tenantId, parsed.subjectType, parsed.subjectId);
+  await assertProducts(user.tenantId, parsed.productIds);
 
   const term = await prisma.partnershipTerm.create({
     data: { ...parsed, dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null, tenantId: user.tenantId },
@@ -50,6 +57,7 @@ export async function updatePartnershipTerm(id: string, data: unknown) {
   const { term, user } = await requireTerm(id);
   // Subject and direction are fixed once created — only the term's content changes.
   const parsed = partnershipTermSchema.omit({ subjectType: true, subjectId: true, direction: true }).partial().parse(data);
+  await assertProducts(user.tenantId, parsed.productIds);
   const { dueDate, ...rest } = parsed;
   const updated = await prisma.partnershipTerm.update({
     where: { id },
@@ -70,8 +78,9 @@ export async function deletePartnershipTerm(id: string) {
 export async function createPartnershipFulfillment(data: unknown) {
   const parsed = partnershipFulfillmentSchema.parse(data);
   const { term, user } = await requireTerm(parsed.termId);
+  await assertProducts(user.tenantId, parsed.productId ? [parsed.productId] : []);
   const fulfillment = await prisma.partnershipFulfillment.create({
-    data: { ...parsed, date: new Date(parsed.date), tenantId: user.tenantId, recordedById: user.id },
+    data: { ...parsed, productId: parsed.productId || null, date: new Date(parsed.date), tenantId: user.tenantId, recordedById: user.id },
   });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: term.subjectType, entityId: term.subjectId, action: "fulfillment_create", changes: { term: term.title } });
   revalidateSubject(term.subjectType, term.subjectId);

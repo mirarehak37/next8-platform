@@ -15,6 +15,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { FormCurrencyInput } from "@/components/form-currency-input";
 import { Section, Field } from "@/components/partnerships/form-parts";
 import { CheckCheck } from "lucide-react";
+import { FormCombobox } from "@/components/form-combobox";
+import { formatCurrency } from "@/lib/format";
+import type { ProductOption } from "@/lib/partnership-queries";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -22,27 +25,48 @@ function today() {
 
 export function FulfillmentFormDialog({
   term,
+  products,
 }: {
-  term: { id: string; title: string; direction: string; amount: number | null; quantity: number | null };
+  products: ProductOption[];
+  term: {
+    id: string;
+    title: string;
+    direction: string;
+    valueType: string;
+    amount: number | null;
+    percent: number | null;
+    percentBase: string | null;
+    quantity: number | null;
+    period: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const weGive = term.direction === "we_give";
-  const isPayout = weGive && !!term.amount;
+  const isPercent = term.valueType === "percent" && term.percent != null;
+  const isPayout = weGive && (!!term.amount || isPercent);
   const blank = (): PartnershipFulfillmentInput => ({
     termId: term.id,
     date: today(),
     quantity: 1,
-    // A money term without a unit count is usually paid in full each period.
-    amount: term.amount && !term.quantity ? term.amount : null,
+    productId: null,
+    baseAmount: null,
+    // A money term without a unit count is usually paid in full each period / per sale.
+    amount: !isPercent && term.amount && !term.quantity ? term.amount : null,
   });
 
   const {
-    register, handleSubmit, control, formState: { errors, isSubmitting }, reset,
+    register, handleSubmit, control, formState: { errors, isSubmitting }, reset, setValue, getValues,
   } = useForm<PartnershipFulfillmentInput>({
     resolver: zodResolver(partnershipFulfillmentSchema),
     defaultValues: blank(),
   });
+
+  function setBase(value: number) {
+    setValue("baseAmount", value);
+    // Pre-compute the commission; it stays editable (rounding, refunds…).
+    setValue("amount", Math.round(value * term.percent!) / 100);
+  }
 
   async function onSubmit(data: PartnershipFulfillmentInput) {
     try {
@@ -66,8 +90,42 @@ export function FulfillmentFormDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <Section title={isPayout ? "Výplata" : weGive ? "Poskytnuté plnění" : "Splněná povinnost"}>
             <Field label="Datum *" error={errors.date?.message}><Input type="date" {...register("date")} /></Field>
-            <Field label="Počet"><Input type="number" min={1} {...register("quantity")} /></Field>
-            <Field label="Částka" className="sm:col-span-2">
+            <Field label={isPercent || term.period === "per_event" ? "Počet prodejů" : "Počet"}><Input
+                type="number"
+                min={1}
+                {...register("quantity", {
+                  onChange: (e) => {
+                    const product = products.find((p) => p.id === getValues("productId"));
+                    if (isPercent && product) setBase(product.price * (Number(e.target.value) || 1));
+                  },
+                })}
+              /></Field>
+            {isPercent && products.length > 0 && (
+              <Field label="Prodaný produkt" className="sm:col-span-2">
+                <Controller control={control} name="productId" render={({ field }) => (
+                  <FormCombobox
+                    value={field.value}
+                    onChange={(id) => {
+                      field.onChange(id || null);
+                      const product = products.find((p) => p.id === id);
+                      // Several sold units of the same package → base = price × count.
+                      if (product) setBase(product.price * (Number(getValues("quantity")) || 1));
+                    }}
+                    options={products.filter((p) => p.isActive).map((p) => ({ value: p.id, label: p.name, hint: formatCurrency(p.price) }))}
+                    placeholder="Vyberte produkt"
+                    allowClear
+                  />
+                )} />
+              </Field>
+            )}
+            {isPercent && (
+              <Field label={`Částka prodeje${term.percentBase ? ` (${term.percentBase})` : ""}`} className="sm:col-span-2">
+                <Controller control={control} name="baseAmount" render={({ field }) => (
+                  <FormCurrencyInput value={field.value as number | null | undefined} onChange={setBase} />
+                )} />
+              </Field>
+            )}
+            <Field label={isPercent ? `Provize (${term.percent} %)` : "Částka"} className="sm:col-span-2">
               <Controller control={control} name="amount" render={({ field }) => (
                 <FormCurrencyInput value={field.value as number | null | undefined} onChange={field.onChange} />
               )} />

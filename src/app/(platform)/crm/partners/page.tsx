@@ -5,7 +5,7 @@ import { can } from "@/lib/rbac";
 import { PageHeader } from "@/components/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { PartnerFormDialog } from "@/components/partnerships/partner-form-dialog";
-import { contractState, yearlyValue } from "@/lib/partnerships";
+import { contractState, oneYearAgo, yearlyValue } from "@/lib/partnerships";
 import { formatCurrency } from "@/lib/format";
 import { HeartHandshake, CalendarClock, TrendingUp, Wallet } from "lucide-react";
 import { PartnersTable, type PartnerRow } from "./partners-table";
@@ -21,7 +21,11 @@ export default async function PartnersPage() {
       include: { owner: { select: { name: true } }, company: { select: { name: true } }, contact: { select: { firstName: true, lastName: true } } },
       orderBy: { name: "asc" },
     }),
-    prisma.partnershipTerm.findMany({ where: { tenantId: user.tenantId, subjectType: "partner" } }),
+    prisma.partnershipTerm.findMany({
+      where: { tenantId: user.tenantId, subjectType: "partner" },
+      // Variable (commission) terms are costed from what was actually logged in the last year.
+      include: { fulfillments: { where: { date: { gte: oneYearAgo() } }, select: { date: true, quantity: true, amount: true } } },
+    }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.contact.findMany({ where: { tenantId: user.tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } }),

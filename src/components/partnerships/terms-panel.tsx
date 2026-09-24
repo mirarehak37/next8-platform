@@ -9,9 +9,10 @@ import { StatusBadge } from "@/components/status-badge";
 import { TermFormDialog } from "@/components/partnerships/term-form-dialog";
 import { FulfillmentFormDialog } from "@/components/partnerships/fulfillment-form-dialog";
 import { deletePartnershipFulfillment, deletePartnershipTerm } from "@/lib/actions/partnership-terms";
-import { termProgress, yearlyValue } from "@/lib/partnerships";
+import { isVariableTerm, termProgress, termValueLabel, trailingYear, yearlyValue } from "@/lib/partnerships";
 import { findMeta, TERM_PERIODS, termTypes } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
+import type { ProductOption } from "@/lib/partnership-queries";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, ExternalLink, Pencil, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,8 @@ export type FulfillmentView = {
   id: string;
   date: string;
   quantity: number;
+  productName: string | null;
+  baseAmount: number | null;
   amount: number | null;
   link: string | null;
   note: string | null;
@@ -31,7 +34,11 @@ export type TermView = {
   type: string;
   title: string;
   description: string | null;
+  valueType: string;
   amount: number | null;
+  percent: number | null;
+  percentBase: string | null;
+  productIds: string[];
   quantity: number | null;
   period: string;
   dueDate: string | null;
@@ -53,12 +60,14 @@ export function TermsPanel({
   terms,
   canEdit,
   labels,
+  products,
 }: {
   subjectType: "ambassador" | "partner";
   subjectId: string;
   terms: TermView[];
   canEdit: boolean;
   labels: { weGive: string; theyGive: string };
+  products: ProductOption[];
 }) {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -78,13 +87,13 @@ export function TermsPanel({
                   <div className="text-xs text-muted-foreground">Hodnota za rok (odhad): {formatCurrency(total)}</div>
                 )}
               </div>
-              {canEdit && <TermFormDialog subjectType={subjectType} subjectId={subjectId} direction={direction} />}
+              {canEdit && <TermFormDialog subjectType={subjectType} subjectId={subjectId} direction={direction} products={products} />}
             </div>
             {list.length === 0 && (
               <div className="py-8 text-center text-sm text-muted-foreground border rounded-md border-dashed">Zatím nic nezadáno.</div>
             )}
             {list.map((term) => (
-              <TermCard key={term.id} term={term} subjectType={subjectType} subjectId={subjectId} canEdit={canEdit} />
+              <TermCard key={term.id} term={term} subjectType={subjectType} subjectId={subjectId} canEdit={canEdit} products={products} />
             ))}
           </div>
         );
@@ -93,7 +102,19 @@ export function TermsPanel({
   );
 }
 
-function TermCard({ term, subjectType, subjectId, canEdit }: { term: TermView; subjectType: "ambassador" | "partner"; subjectId: string; canEdit: boolean }) {
+function TermCard({
+  term,
+  subjectType,
+  subjectId,
+  canEdit,
+  products,
+}: {
+  term: TermView;
+  subjectType: "ambassador" | "partner";
+  subjectId: string;
+  canEdit: boolean;
+  products: ProductOption[];
+}) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const typeLabel = findMeta(termTypes(subjectType, term.direction), term.type)?.label ?? term.type;
@@ -122,7 +143,11 @@ function TermCard({ term, subjectType, subjectId, canEdit }: { term: TermView; s
     }
   }
 
-  const perPeriod = period && period.value !== "one_off" ? ` / ${period.short}` : "";
+  const perPeriod = period && period.value !== "one_off" && period.value !== "per_event" ? ` / ${period.short}` : "";
+  const valueLabel = termValueLabel(term, formatCurrency, period?.short);
+  const variable = isVariableTerm(term);
+  const lastYear = variable ? trailingYear(term.fulfillments) : null;
+  const termProducts = products.filter((p) => term.productIds.includes(p.id));
 
   return (
     <Card className={cn(!term.isActive && "opacity-60")}>
@@ -136,11 +161,16 @@ function TermCard({ term, subjectType, subjectId, canEdit }: { term: TermView; s
               {overdue && <StatusBadge label="Po termínu" color="rose" />}
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              {term.amount ? <span className="font-medium text-foreground">{formatCurrency(term.amount)}{perPeriod}</span> : null}
-              {term.quantity ? <span>{term.quantity}×{perPeriod}</span> : null}
-              {!term.amount && !term.quantity && period && <span>{period.label}</span>}
+              {valueLabel ? <span className="font-medium text-foreground">{valueLabel}</span> : null}
+              {term.quantity && !variable ? <span>{term.quantity}×{perPeriod}</span> : null}
+              {!valueLabel && !(term.quantity && !variable) && period && <span>{period.label}</span>}
               {term.dueDate && <span>Termín: {formatDate(term.dueDate)}</span>}
             </div>
+            {termProducts.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {termProducts.map((p) => <StatusBadge key={p.id} label={p.name} color="indigo" />)}
+              </div>
+            )}
             {term.description && <p className="text-xs text-muted-foreground whitespace-pre-line">{term.description}</p>}
           </div>
           {canEdit && (
@@ -149,9 +179,11 @@ function TermCard({ term, subjectType, subjectId, canEdit }: { term: TermView; s
                 subjectType={subjectType}
                 subjectId={subjectId}
                 direction={term.direction}
+                products={products}
                 term={{
                   id: term.id, subjectType, subjectId, direction: term.direction, type: term.type, title: term.title,
-                  description: term.description, amount: term.amount, quantity: term.quantity, period: term.period,
+                  description: term.description, valueType: term.valueType as "fixed" | "percent", amount: term.amount,
+                  percent: term.percent, percentBase: term.percentBase, productIds: term.productIds, quantity: term.quantity, period: term.period,
                   dueDate: term.dueDate?.slice(0, 10) ?? null, isActive: term.isActive,
                 }}
                 trigger={<Button variant="ghost" size="icon-sm"><Pencil className="h-3.5 w-3.5" /></Button>}
@@ -160,6 +192,15 @@ function TermCard({ term, subjectType, subjectId, canEdit }: { term: TermView; s
             </div>
           )}
         </div>
+
+        {lastYear && (
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Za posledních 12 měsíců</span>
+            <span className="font-medium">
+              {lastYear.count}× · {formatCurrency(lastYear.amount)}
+            </span>
+          </div>
+        )}
 
         {progress.target ? (
           <div className="space-y-1">
@@ -184,7 +225,7 @@ function TermCard({ term, subjectType, subjectId, canEdit }: { term: TermView; s
           ) : (
             <span className="text-xs text-muted-foreground">Zatím nic nezapsáno.</span>
           )}
-          {canEdit && term.isActive && <FulfillmentFormDialog term={term} />}
+          {canEdit && term.isActive && <FulfillmentFormDialog term={term} products={termProducts.length ? termProducts : products} />}
         </div>
 
         {expanded && (
@@ -193,6 +234,8 @@ function TermCard({ term, subjectType, subjectId, canEdit }: { term: TermView; s
               <div key={f.id} className="flex items-center gap-2 text-xs group">
                 <span className="w-24 shrink-0 text-muted-foreground">{formatDate(f.date)}</span>
                 <span className="shrink-0">{f.quantity}×</span>
+                {f.productName ? <span className="shrink-0">{f.productName}</span> : null}
+                {f.baseAmount ? <span className="shrink-0 text-muted-foreground">z {formatCurrency(f.baseAmount)}</span> : null}
                 {f.amount ? <span className="shrink-0 font-medium">{formatCurrency(f.amount)}</span> : null}
                 <span className="truncate text-muted-foreground">{f.note}</span>
                 {f.link && (
