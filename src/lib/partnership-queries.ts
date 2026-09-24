@@ -7,7 +7,9 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
   const [terms, attachments, auditLogs] = await Promise.all([
     prisma.partnershipTerm.findMany({
       where: { tenantId, subjectType, subjectId },
-      include: { fulfillments: { include: { recordedBy: { select: { name: true } } }, orderBy: { date: "desc" } } },
+      include: {
+        fulfillments: { include: { recordedBy: { select: { name: true } }, product: { select: { name: true } } }, orderBy: { date: "desc" } },
+      },
       orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
     }),
     prisma.attachment.findMany({
@@ -33,6 +35,7 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
     amount: t.amount,
     percent: t.percent,
     percentBase: t.percentBase,
+    productIds: t.productIds,
     quantity: t.quantity,
     period: t.period,
     dueDate: t.dueDate?.toISOString() ?? null,
@@ -41,6 +44,7 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
       id: f.id,
       date: f.date.toISOString(),
       quantity: f.quantity,
+      productName: f.product?.name ?? null,
       baseAmount: f.baseAmount,
       amount: f.amount,
       link: f.link,
@@ -58,5 +62,18 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
     createdAt: a.createdAt.toISOString(),
   }));
 
-  return { terms: termViews, attachments: attachmentViews, auditLogs };
+  return { terms: termViews, attachments: attachmentViews, auditLogs, products: await loadProductOptions(tenantId) };
+}
+
+export type ProductOption = { id: string; name: string; price: number; category: string | null; isActive: boolean };
+
+// Catalog products commission terms can refer to — subscription packages first.
+export async function loadProductOptions(tenantId: string): Promise<ProductOption[]> {
+  const products = await prisma.product.findMany({
+    where: { tenantId },
+    select: { id: true, name: true, price: true, category: true, isActive: true },
+    orderBy: { name: "asc" },
+  });
+  const isSubscription = (p: ProductOption) => /předplatn/i.test(p.category ?? "");
+  return products.sort((a, b) => Number(isSubscription(b)) - Number(isSubscription(a)));
 }

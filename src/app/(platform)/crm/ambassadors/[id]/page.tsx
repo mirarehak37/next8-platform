@@ -33,7 +33,7 @@ export default async function AmbassadorDetailPage({ params }: { params: Promise
   if (!ambassador) notFound();
 
   const canEdit = can(user.role, "ambassador", "edit");
-  const [{ terms, attachments, auditLogs }, owners, companies, contacts] = await Promise.all([
+  const [{ terms, attachments, auditLogs, products }, owners, companies, contacts] = await Promise.all([
     loadPartnershipExtras(user.tenantId, "ambassador", id),
     canEdit ? prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }) : [],
     canEdit ? prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }) : [],
@@ -172,6 +172,7 @@ export default async function AmbassadorDetailPage({ params }: { params: Promise
               subjectId={ambassador.id}
               terms={terms}
               canEdit={canEdit}
+              products={products}
               labels={{ weGive: "Co mu platíme / dáváme", theyGive: "Co musí udělat" }}
             />
           </TabsContent>

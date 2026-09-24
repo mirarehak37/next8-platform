@@ -17,7 +17,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { FormSelect } from "@/components/form-select";
 import { FormCurrencyInput } from "@/components/form-currency-input";
 import { Section, Field } from "@/components/partnerships/form-parts";
-import { Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
+import { formatCurrency } from "@/lib/format";
+import type { ProductOption } from "@/lib/partnership-queries";
 import { TERM_PERIODS, TERM_VALUE_TYPES, termTypes } from "@/lib/constants";
 
 export function TermFormDialog({
@@ -26,10 +28,12 @@ export function TermFormDialog({
   direction,
   term,
   trigger,
+  products,
 }: {
   subjectType: "ambassador" | "partner";
   subjectId: string;
   direction: "we_give" | "they_give";
+  products: ProductOption[];
   term?: (PartnershipTermInput & { id: string }) | null;
   trigger?: React.ReactElement;
 }) {
@@ -37,7 +41,7 @@ export function TermFormDialog({
   const router = useRouter();
   const isEdit = !!term;
   const types = termTypes(subjectType, direction);
-  const blank: PartnershipTermInput = { subjectType, subjectId, direction, type: types[0].value, title: "", valueType: "fixed", period: "one_off", isActive: true };
+  const blank: PartnershipTermInput = { subjectType, subjectId, direction, type: types[0].value, title: "", valueType: "fixed", productIds: [], period: "one_off", isActive: true };
 
   const {
     register, handleSubmit, control, formState: { errors, isSubmitting }, reset, getValues, setValue, setError,
@@ -57,7 +61,7 @@ export function TermFormDialog({
     }
     const data: PartnershipTermInput = isPercent
       ? { ...values, amount: null, quantity: null }
-      : { ...values, percent: null, percentBase: null, ...(values.period === "per_event" && { quantity: null }) };
+      : { ...values, percent: null, percentBase: null, productIds: [], ...(values.period === "per_event" && { quantity: null }) };
     try {
       if (isEdit) {
         await updatePartnershipTerm(term!.id, data);
@@ -138,6 +142,31 @@ export function TermFormDialog({
                 <Field label="Z čeho">
                   <Input placeholder="např. předplatného aplikace" {...register("percentBase")} />
                 </Field>
+                {products.length > 0 && (
+                  <Field label="Z prodeje produktů (prázdné = jakýkoli)" className="sm:col-span-2">
+                    <Controller control={control} name="productIds" render={({ field }) => {
+                      const selected = field.value ?? [];
+                      return (
+                        <div className="flex flex-wrap gap-1.5">
+                          {products.filter((p) => p.isActive || selected.includes(p.id)).map((p) => {
+                            const on = selected.includes(p.id);
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => field.onChange(on ? selected.filter((id) => id !== p.id) : [...selected, p.id])}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors ${on ? "border-[#FF1947] bg-[#FF1947]/10 text-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                              >
+                                {on && <Check className="h-3 w-3" />}
+                                {p.name} <span className="opacity-60">{formatCurrency(p.price)}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    }} />
+                  </Field>
+                )}
               </>
             ) : (
               <>

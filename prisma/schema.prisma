@@ -755,8 +755,9 @@ model Product {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   dealProducts DealProduct[]
+  fulfillments PartnershipFulfillment[]
   quoteItems   QuoteItem[]
 
   @@index([tenantId, isActive])
@@ -1007,6 +1008,7 @@ model PartnershipTerm {
   amount      Float? // money value per period (fixed)
   percent     Float? // e.g. 15 = 15 % (percent)
   percentBase String? // what the percentage is taken from, e.g. "předplatné aplikace"
+  productIds  String[]  @default([]) // catalog products the commission applies to (empty = any)
   quantity    Int? // deliverable count per period (e.g. 4 posts)
   period      String    @default("one_off") // one_off | monthly | quarterly | season | yearly | per_event
   dueDate     DateTime?
@@ -1028,6 +1030,7 @@ model PartnershipFulfillment {
   termId       String
   date         DateTime
   quantity     Int      @default(1)
+  productId    String? // catalog product that was sold (commission terms)
   baseAmount   Float? // sale value a percentage term was computed from
   amount       Float?
   link         String?
@@ -1037,6 +1040,7 @@ model PartnershipFulfillment {
 
   tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   term       PartnershipTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+  product    Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   recordedBy User            @relation("FulfillmentRecorder", fields: [recordedById], references: [id])
 
   @@index([tenantId, termId, date])
