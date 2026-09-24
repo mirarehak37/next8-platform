@@ -172,6 +172,25 @@ export const SPORTS = [
   "Jiné",
 ] as const;
 
+export const CLUB_TEAM_CATEGORIES = [
+  "muži",
+  "ženy",
+  "veteráni",
+  "U19 junioři",
+  "U19 juniorky",
+  "U17 dorostenci",
+  "U17 dorostenky",
+  "U15 starší žáci",
+  "U15 starší žákyně",
+  "U13 mladší žáci",
+  "U13 mladší žákyně",
+  "U11 starší elévové",
+  "U11 starší elévky",
+  "U9 mladší elévové",
+  "U9 mladší elévky",
+  "U7 přípravka",
+] as const;
+
 export const PRODUCT_UNITS = [
   { value: "ks", label: "ks" },
   { value: "hod", label: "hod" },

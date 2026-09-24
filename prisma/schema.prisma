@@ -40,6 +40,7 @@ model Tenant {
 
   companies    Company[]
   contacts     Contact[]
+  clubTeams    ClubTeam[]
   leads        Lead[]
   pipelines    Pipeline[]
   deals        Deal[]
@@ -505,15 +506,52 @@ model Company {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   owner  User   @relation("CompanyOwner", fields: [ownerId], references: [id])
 
-  contacts CompanyContact[]
-  leads    Lead[]
-  deals    Deal[]
-  quotes   Quote[]
+  contacts  CompanyContact[]
+  leads     Lead[]
+  deals     Deal[]
+  quotes    Quote[]
+  clubTeams ClubTeam[]
 
   @@index([tenantId, status])
   @@index([tenantId, name])
   @@index([tenantId, sport])
   @@index([tenantId, league])
+}
+
+// A club (Company) can field several squads — men's A/B team, women's team,
+// youth categories — each registered in its own competition. Distinct from
+// the `Team` model above, which groups internal CRM users, not club rosters.
+model ClubTeam {
+  id         String   @id @default(cuid())
+  tenantId   String
+  companyId  String
+  category   String // muži | ženy | U19 junioři | U17 dorostenci | U15 starší žáci …
+  name       String // team's own registered name, e.g. "Zlín Lions B"
+  league     String? // competition/league this squad currently plays
+  externalId String? // source-system team id, for idempotent re-sync
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  contacts ClubTeamContact[]
+
+  @@index([tenantId, companyId])
+  @@index([tenantId, category])
+}
+
+model ClubTeamContact {
+  id         String  @id @default(cuid())
+  clubTeamId String
+  contactId  String
+  role       String? // trenér | vedoucí týmu | asistent …
+  isPrimary  Boolean @default(false)
+
+  clubTeam ClubTeam @relation(fields: [clubTeamId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([clubTeamId, contactId])
 }
 
 model Contact {
@@ -550,6 +588,7 @@ model Contact {
   dealContacts DealContact[]
   leads        Lead[]
   quotes       Quote[]
+  clubTeams    ClubTeamContact[]
 
   @@index([tenantId, lastName])
 }

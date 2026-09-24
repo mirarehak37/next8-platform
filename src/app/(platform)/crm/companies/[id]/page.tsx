@@ -9,8 +9,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { CompanyFormDialog, CompanyEditTrigger } from "@/components/crm/company-form-dialog";
+import { ClubTeamFormDialog, ClubTeamEditTrigger } from "@/components/crm/club-team-form-dialog";
+import { ClubTeamContacts } from "@/components/crm/club-team-contacts";
+import { ClubTeamDeleteButton } from "@/components/crm/club-team-delete-button";
 import {
-  Building2, Globe, Phone, Mail, MapPin, Users, Handshake, FileText, CheckSquare, History, Plus,
+  Building2, Globe, Phone, Mail, MapPin, Users, Handshake, FileText, CheckSquare, History, Plus, Shield,
 } from "lucide-react";
 import { COMPANY_STATUSES, findMeta, ACTIVITY_TYPES, DEAL_STATUSES, QUOTE_STATUSES, TASK_STATUSES } from "@/lib/constants";
 import { formatCurrency, formatDate, formatDateTime, initials } from "@/lib/format";
@@ -27,11 +30,12 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       contacts: { include: { contact: true } },
       deals: { include: { stage: true }, orderBy: { createdAt: "desc" } },
       quotes: { orderBy: { createdAt: "desc" } },
+      clubTeams: { include: { contacts: { include: { contact: true } } }, orderBy: { category: "asc" } },
     },
   });
   if (!company) notFound();
 
-  const [activities, tasks, auditLogs, owners, tags] = await Promise.all([
+  const [activities, tasks, auditLogs, owners, tags, allContacts] = await Promise.all([
     prisma.activity.findMany({
       where: { tenantId: user.tenantId, OR: [{ subjectType: "company", subjectId: id }, { subjectType: "deal", subjectId: { in: company.deals.map((d) => d.id) } }] },
       include: { owner: { select: { name: true } } },
@@ -51,7 +55,9 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
     }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.taggedItem.findMany({ where: { entityType: "company", entityId: id }, include: { tag: true } }),
+    prisma.contact.findMany({ where: { tenantId: user.tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } }),
   ]);
+  const contactOptions = allContacts.map((c) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }));
 
   const statusMeta = findMeta(COMPANY_STATUSES, company.status);
   const openDeals = company.deals.filter((d) => d.status === "open");
@@ -157,6 +163,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           <TabsList variant="line">
             <TabsTrigger value="overview">Přehled</TabsTrigger>
             <TabsTrigger value="contacts">Kontakty ({company.contacts.length})</TabsTrigger>
+            <TabsTrigger value="teams">Týmy ({company.clubTeams.length})</TabsTrigger>
             <TabsTrigger value="deals">Obchodní případy ({company.deals.length})</TabsTrigger>
             <TabsTrigger value="activities">Aktivity ({activities.length})</TabsTrigger>
             <TabsTrigger value="quotes">Nabídky ({company.quotes.length})</TabsTrigger>
@@ -197,6 +204,39 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                   </CardContent>
                 </Card>
               </Link>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="teams" className="pt-4 space-y-2">
+            <div className="flex justify-end">
+              <ClubTeamFormDialog companyId={company.id} />
+            </div>
+            {company.clubTeams.length === 0 && <EmptyState text="Zatím žádné týmy." icon={Shield} />}
+            {company.clubTeams.map((team) => (
+              <Card key={team.id}>
+                <CardContent className="py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <StatusBadge label={team.category} color="indigo" />
+                      <span className="text-sm font-medium">{team.name}</span>
+                      {team.league && <span className="text-xs text-muted-foreground">· {team.league}</span>}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <ClubTeamFormDialog
+                        companyId={company.id}
+                        team={{ id: team.id, companyId: company.id, category: team.category, name: team.name, league: team.league }}
+                        trigger={<ClubTeamEditTrigger />}
+                      />
+                      <ClubTeamDeleteButton id={team.id} />
+                    </div>
+                  </div>
+                  <ClubTeamContacts
+                    clubTeamId={team.id}
+                    contacts={team.contacts.map((c) => ({ contactId: c.contact.id, name: `${c.contact.firstName} ${c.contact.lastName}`, role: c.role }))}
+                    allContacts={contactOptions}
+                  />
+                </CardContent>
+              </Card>
             ))}
           </TabsContent>
 
@@ -327,10 +367,10 @@ function actionLabel(action: string) {
   return { create: "vytvořil(a) záznam", update: "upravil(a) záznam", delete: "smazal(a) záznam" }[action] ?? action;
 }
 
-function EmptyState({ text }: { text: string }) {
+function EmptyState({ text, icon: Icon = Users }: { text: string; icon?: typeof Users }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 text-sm text-muted-foreground border rounded-md border-dashed">
-      <Users className="h-6 w-6 mb-2 opacity-40" />
+      <Icon className="h-6 w-6 mb-2 opacity-40" />
       {text}
     </div>
   );
