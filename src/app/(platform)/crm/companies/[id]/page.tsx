@@ -180,7 +180,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                 <div><div className="text-muted-foreground text-xs mb-1">Segment</div>{company.segment ?? "—"}</div>
                 <div><div className="text-muted-foreground text-xs mb-1">Zdroj</div>{company.source ?? "—"}</div>
                 <div><div className="text-muted-foreground text-xs mb-1">Roční obrat</div>{company.annualRevenue ? formatCurrency(company.annualRevenue) : "—"}</div>
-                <div><div className="text-muted-foreground text-xs mb-1">Počet zaměstnanců</div>{company.employeeCount ?? "—"}</div>
+                <div><div className="text-muted-foreground text-xs mb-1">Počet členů</div>{company.employeeCount ?? "—"}</div>
                 <div className="col-span-2"><div className="text-muted-foreground text-xs mb-1">Adresa</div>{[company.billingStreet, company.billingCity, company.billingZip].filter(Boolean).join(", ") || "—"}</div>
                 <div className="col-span-2"><div className="text-muted-foreground text-xs mb-1">Poznámka</div>{company.description ?? "—"}</div>
               </CardContent>

@@ -59,6 +59,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Moduly platformy", href: "/admin/modules", icon: "LayoutGrid", resource: "admin" },
       { label: "Vlastní pole", href: "/admin/custom-fields", icon: "SlidersHorizontal", resource: "admin" },
       { label: "Automatizace", href: "/admin/automation", icon: "Workflow", resource: "admin" },
+      { label: "Import klubů a kontaktů", href: "/admin/florbal-import", icon: "Upload", resource: "admin" },
       { label: "Audit log", href: "/admin/audit-log", icon: "History", resource: "admin" },
     ],
   },
