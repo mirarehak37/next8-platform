@@ -3,15 +3,39 @@ import { formatDate } from "@/lib/format";
 // Pure helpers shared by the Ambassadors and Partners modules (server pages and
 // client components alike) — period windows, progress and cost roll-ups.
 
+export type FulfillmentLike = { date: Date | string; quantity: number; amount: number | null };
+
 export type TermLike = {
   direction: string;
+  valueType?: string;
   amount: number | null;
   quantity: number | null;
   period: string;
   isActive: boolean;
+  fulfillments?: FulfillmentLike[];
 };
 
-export type FulfillmentLike = { date: Date | string; quantity: number; amount: number | null };
+// Commission-style terms (a % of a sale, or paid per sale) have no fixed amount per
+// period — their cost is whatever was actually logged.
+export function isVariableTerm(term: Pick<TermLike, "valueType" | "period">) {
+  return term.valueType === "percent" || term.period === "per_event";
+}
+
+export function oneYearAgo(now = new Date()) {
+  const from = new Date(now);
+  from.setFullYear(from.getFullYear() - 1);
+  return from;
+}
+
+// Units and money logged in the last 12 months — the basis for variable terms.
+export function trailingYear(fulfillments: FulfillmentLike[], now = new Date()) {
+  const from = oneYearAgo(now);
+  const recent = fulfillments.filter((f) => new Date(f.date) >= from);
+  return {
+    count: recent.reduce((s, f) => s + f.quantity, 0),
+    amount: recent.reduce((s, f) => s + (f.amount ?? 0), 0),
+  };
+}
 
 const YEARLY_MULTIPLIER: Record<string, number> = { monthly: 12, quarterly: 4, season: 1, yearly: 1, one_off: 1 };
 
@@ -46,6 +70,7 @@ export function periodWindow(period: string, now = new Date()): { start: Date; e
 // Progress of a term within its current period: delivered units for obligations,
 // paid amount for money terms (falls back to units when the term has no amount).
 export function termProgress(term: TermLike, fulfillments: FulfillmentLike[], now = new Date()) {
+  if (isVariableTerm(term)) return { done: 0, target: null, ratio: null, measuresMoney: false };
   const window = periodWindow(term.period, now);
   const inWindow = window
     ? fulfillments.filter((f) => {
@@ -63,11 +88,32 @@ export function termProgress(term: TermLike, fulfillments: FulfillmentLike[], no
   return { done, target, ratio, measuresMoney };
 }
 
-// Rough yearly value of a set of terms in one direction (one-off terms counted once).
+// Rough yearly value of a set of terms in one direction: fixed terms extrapolated
+// from their period (one-off counted once), variable terms from the last 12 months
+// of logged fulfilments (only when the terms carry them).
 export function yearlyValue(terms: TermLike[], direction: "we_give" | "they_give") {
   return terms
-    .filter((t) => t.isActive && t.direction === direction && t.amount)
-    .reduce((s, t) => s + (t.amount ?? 0) * (YEARLY_MULTIPLIER[t.period] ?? 1), 0);
+    .filter((t) => t.isActive && t.direction === direction)
+    .reduce((s, t) => {
+      if (isVariableTerm(t)) return s + (t.fulfillments ? trailingYear(t.fulfillments).amount : 0);
+      return s + (t.amount ?? 0) * (YEARLY_MULTIPLIER[t.period] ?? 1);
+    }, 0);
+}
+
+// "15 % z předplatného" / "5 000 Kč / měs." style label for a term's value.
+export function termValueLabel(
+  term: Pick<TermLike, "valueType" | "amount" | "period"> & { percent?: number | null; percentBase?: string | null },
+  formatMoney: (n: number) => string,
+  periodShort?: string,
+) {
+  const per = term.period === "per_event" ? " za každý prodej" : periodShort && term.period !== "one_off" ? ` / ${periodShort}` : "";
+  if (term.valueType === "percent") {
+    if (term.percent == null) return null;
+    const pct = `${new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 2 }).format(term.percent)} %`;
+    // A percentage is inherently per sale, so only a non-sale period needs a suffix.
+    return `${pct}${term.percentBase ? ` z ${term.percentBase.replace(/^z\s+/i, "")}` : ""}${term.period === "per_event" ? "" : per}`;
+  }
+  return term.amount ? `${formatMoney(term.amount)}${per}` : null;
 }
 
 export const EXPIRING_SOON_DAYS = 60;

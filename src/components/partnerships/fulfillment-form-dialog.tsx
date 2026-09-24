@@ -23,22 +23,34 @@ function today() {
 export function FulfillmentFormDialog({
   term,
 }: {
-  term: { id: string; title: string; direction: string; amount: number | null; quantity: number | null };
+  term: {
+    id: string;
+    title: string;
+    direction: string;
+    valueType: string;
+    amount: number | null;
+    percent: number | null;
+    percentBase: string | null;
+    quantity: number | null;
+    period: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const weGive = term.direction === "we_give";
-  const isPayout = weGive && !!term.amount;
+  const isPercent = term.valueType === "percent" && term.percent != null;
+  const isPayout = weGive && (!!term.amount || isPercent);
   const blank = (): PartnershipFulfillmentInput => ({
     termId: term.id,
     date: today(),
     quantity: 1,
-    // A money term without a unit count is usually paid in full each period.
-    amount: term.amount && !term.quantity ? term.amount : null,
+    baseAmount: null,
+    // A money term without a unit count is usually paid in full each period / per sale.
+    amount: !isPercent && term.amount && !term.quantity ? term.amount : null,
   });
 
   const {
-    register, handleSubmit, control, formState: { errors, isSubmitting }, reset,
+    register, handleSubmit, control, formState: { errors, isSubmitting }, reset, setValue,
   } = useForm<PartnershipFulfillmentInput>({
     resolver: zodResolver(partnershipFulfillmentSchema),
     defaultValues: blank(),
@@ -66,8 +78,22 @@ export function FulfillmentFormDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <Section title={isPayout ? "Výplata" : weGive ? "Poskytnuté plnění" : "Splněná povinnost"}>
             <Field label="Datum *" error={errors.date?.message}><Input type="date" {...register("date")} /></Field>
-            <Field label="Počet"><Input type="number" min={1} {...register("quantity")} /></Field>
-            <Field label="Částka" className="sm:col-span-2">
+            <Field label={isPercent || term.period === "per_event" ? "Počet prodejů" : "Počet"}><Input type="number" min={1} {...register("quantity")} /></Field>
+            {isPercent && (
+              <Field label={`Částka prodeje${term.percentBase ? ` (${term.percentBase})` : ""}`} className="sm:col-span-2">
+                <Controller control={control} name="baseAmount" render={({ field }) => (
+                  <FormCurrencyInput
+                    value={field.value as number | null | undefined}
+                    onChange={(v) => {
+                      field.onChange(v);
+                      // Pre-compute the commission; it stays editable (rounding, refunds…).
+                      setValue("amount", Math.round(v * term.percent!) / 100);
+                    }}
+                  />
+                )} />
+              </Field>
+            )}
+            <Field label={isPercent ? `Provize (${term.percent} %)` : "Částka"} className="sm:col-span-2">
               <Controller control={control} name="amount" render={({ field }) => (
                 <FormCurrencyInput value={field.value as number | null | undefined} onChange={field.onChange} />
               )} />

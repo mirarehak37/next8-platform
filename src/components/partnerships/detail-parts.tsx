@@ -93,7 +93,10 @@ export function FulfillmentLedger({ terms, weGiveLabel, theyGiveLabel }: { terms
                     <td className="px-4 py-2">{r.termTitle}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-muted-foreground">{r.direction === "we_give" ? "NEXT8 →" : "→ NEXT8"}</td>
                     <td className="px-4 py-2 text-right">{r.quantity}</td>
-                    <td className="px-4 py-2 text-right whitespace-nowrap">{r.amount ? formatCurrency(r.amount) : "—"}</td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                      {r.amount ? formatCurrency(r.amount) : "—"}
+                      {r.baseAmount ? <div className="text-xs text-muted-foreground">z prodeje {formatCurrency(r.baseAmount)}</div> : null}
+                    </td>
                     <td className="px-4 py-2 text-muted-foreground">
                       {r.link ? <a href={r.link} target="_blank" rel="noopener noreferrer" className="underline">{r.note || "odkaz"}</a> : r.note ?? "—"}
                     </td>

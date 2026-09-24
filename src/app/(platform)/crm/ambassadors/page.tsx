@@ -5,7 +5,7 @@ import { can } from "@/lib/rbac";
 import { PageHeader } from "@/components/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { AmbassadorFormDialog } from "@/components/partnerships/ambassador-form-dialog";
-import { contractState, yearlyValue } from "@/lib/partnerships";
+import { contractState, oneYearAgo, yearlyValue } from "@/lib/partnerships";
 import { formatCurrency } from "@/lib/format";
 import { Star, CalendarClock, Wallet, Users } from "lucide-react";
 import { AmbassadorsTable, type AmbassadorRow } from "./ambassadors-table";
@@ -21,7 +21,11 @@ export default async function AmbassadorsPage() {
       include: { owner: { select: { name: true } }, company: { select: { name: true } } },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     }),
-    prisma.partnershipTerm.findMany({ where: { tenantId: user.tenantId, subjectType: "ambassador" } }),
+    prisma.partnershipTerm.findMany({
+      where: { tenantId: user.tenantId, subjectType: "ambassador" },
+      // Variable (commission) terms are costed from what was actually logged in the last year.
+      include: { fulfillments: { where: { date: { gte: oneYearAgo() } }, select: { date: true, quantity: true, amount: true } } },
+    }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.contact.findMany({ where: { tenantId: user.tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } }),
@@ -66,7 +70,7 @@ export default async function AmbassadorsPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard label="Aktivní ambasadoři" value={String(active.length)} icon={Star} />
           <KpiCard label="Smlouvy ke kontrole" value={String(expiring)} hint="končí do 60 dní nebo vypršely" icon={CalendarClock} />
-          <KpiCard label="Náklady za rok (odhad)" value={formatCurrency(totalCost)} hint="aktivní ambasadoři" icon={Wallet} />
+          <KpiCard label="Náklady za rok (odhad)" value={formatCurrency(totalCost)} hint="aktivní, vč. provizí za 12 měs." icon={Wallet} />
           <KpiCard label="Celkový dosah" value={new Intl.NumberFormat("cs-CZ").format(reach)} hint="sledujících u aktivních" icon={Users} />
         </div>
         <AmbassadorsTable

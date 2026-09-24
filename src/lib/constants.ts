@@ -290,6 +290,12 @@ export const TERM_PERIODS = [
   { value: "quarterly", label: "Čtvrtletně", short: "čtvrtletí" },
   { value: "season", label: "Za sezónu", short: "sezóna" },
   { value: "yearly", label: "Ročně", short: "rok" },
+  { value: "per_event", label: "Při každém prodeji / události", short: "prodej" },
+] as const;
+
+export const TERM_VALUE_TYPES = [
+  { value: "fixed", label: "Pevná částka (Kč)" },
+  { value: "percent", label: "Procenta (provize)" },
 ] as const;
 
 export const ATTACHMENT_CATEGORIES = [
