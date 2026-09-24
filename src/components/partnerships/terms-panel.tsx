@@ -271,8 +271,8 @@ function TermCard({
         {expanded && (
           <div className="border-t pt-2 space-y-1">
             {term.fulfillments.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 text-xs group">
-                <span className="w-24 shrink-0 text-muted-foreground">{formatDate(f.date)}</span>
+              <div key={f.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs group border-b last:border-0 pb-1 sm:border-0 sm:pb-0">
+                <span className="sm:w-24 shrink-0 text-muted-foreground">{formatDate(f.date)}</span>
                 <span className="shrink-0">{f.quantity}×</span>
                 {f.productName ? <span className="shrink-0">{f.productName}</span> : null}
                 {f.baseAmount ? <span className="shrink-0 text-muted-foreground">z {formatCurrency(f.baseAmount)}</span> : null}
