@@ -12,6 +12,7 @@ const ACTION_LABELS: Record<string, string> = {
   term_delete: "smazal(a) podmínku",
   fulfillment_create: "zapsal(a) plnění",
   fulfillment_update: "upravil(a) plnění",
+  fulfillment_plan: "naplánoval(a) obsah",
   fulfillment_paid: "označil(a) odměnu jako vyplacenou",
   fulfillment_unpaid: "zrušil(a) označení vyplaceno",
   attachment_create: "nahrál(a) dokument",

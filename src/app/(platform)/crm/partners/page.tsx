@@ -24,7 +24,7 @@ export default async function PartnersPage() {
     prisma.partnershipTerm.findMany({
       where: { tenantId: user.tenantId, subjectType: "partner" },
       // Commission terms and delivery rewards are costed from what was actually logged in the last year.
-      include: { fulfillments: { where: { date: { gte: oneYearAgo() } }, select: { date: true, quantity: true, amount: true, rewardAmount: true } } },
+      include: { fulfillments: { where: { status: "done", date: { gte: oneYearAgo() } }, select: { date: true, quantity: true, amount: true, rewardAmount: true } } },
     }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),

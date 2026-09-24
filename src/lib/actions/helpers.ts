@@ -37,3 +37,12 @@ export async function logAudit(params: {
     },
   });
 }
+
+// Zod's .partial() still fills in .default() values, so a partial update like
+// { status: "attended" } would also reset every defaulted field (paymentStatus,
+// quantity…). Keep only the keys the caller actually sent.
+export function onlyProvided<T extends object>(parsed: T, input: unknown): Partial<T> {
+  if (!input || typeof input !== "object") return {};
+  const sent = new Set(Object.keys(input));
+  return Object.fromEntries(Object.entries(parsed).filter(([k]) => sent.has(k))) as Partial<T>;
+}

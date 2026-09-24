@@ -54,6 +54,9 @@ model Tenant {
   partners     Partner[]
   terms        PartnershipTerm[]
   fulfillments PartnershipFulfillment[]
+
+  events             Event[]
+  eventRegistrations EventRegistration[]
 }
 
 model User {
@@ -93,6 +96,7 @@ model User {
   ownedAmbassadors     Ambassador[]             @relation("AmbassadorOwner")
   ownedPartners        Partner[]                @relation("PartnerOwner")
   recordedFulfillments PartnershipFulfillment[] @relation("FulfillmentRecorder")
+  ownedEvents          Event[]                  @relation("EventOwner")
 
   comments      Comment[]
   attachments   Attachment[]
@@ -532,8 +536,10 @@ model Company {
   quotes    Quote[]
   clubTeams ClubTeam[]
 
-  ambassadors Ambassador[]
-  sponsors    Partner[]
+  ambassadors        Ambassador[]
+  sponsors           Partner[]
+  hostedEvents       Event[]
+  eventRegistrations EventRegistration[]
 
   @@index([tenantId, status])
   @@index([tenantId, name])
@@ -615,6 +621,7 @@ model Contact {
 
   ambassadorProfiles Ambassador[]
   partnerContacts    Partner[]
+  eventRegistrations EventRegistration[]
 
   @@index([tenantId, lastName])
 }
@@ -957,6 +964,8 @@ model Ambassador {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  eventRegistrations EventRegistration[]
+
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   owner   User     @relation("AmbassadorOwner", fields: [ownerId], references: [id])
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1040,6 +1049,7 @@ model PartnershipFulfillment {
   metricValue  Int? // e.g. views the reel reached — drives bonus tiers
   rewardAmount Float? // what we owe for this delivery (reward + bonus)
   paidAt       DateTime? // when the reward was paid out
+  status       String    @default("done") // planned (content calendar) | done
   amount       Float?
   link         String?
   note         String?
@@ -1052,4 +1062,62 @@ model PartnershipFulfillment {
   recordedBy User            @relation("FulfillmentRecorder", fields: [recordedById], references: [id])
 
   @@index([tenantId, termId, date])
+  @@index([tenantId, status, date])
+}
+
+// =========================================================================
+// EVENTS — camps, performance testing, coach workshops. Registrations can be a
+// CRM contact, a free-text participant (e.g. a kid signed up by a parent) or an
+// ambassador invited as a guest.
+// =========================================================================
+
+model Event {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  type        String    @default("camp") // camp | testing | workshop | other
+  status      String    @default("planned") // planned | open | full | done | cancelled
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  capacity    Int?
+  price       Float? // per participant, CZK
+  companyId   String? // host / partner club
+  ownerId     String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner         User                @relation("EventOwner", fields: [ownerId], references: [id])
+  company       Company?            @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  registrations EventRegistration[]
+
+  @@index([tenantId, startDate])
+}
+
+model EventRegistration {
+  id            String   @id @default(cuid())
+  tenantId      String
+  eventId       String
+  role          String   @default("participant") // participant | coach | guest
+  contactId     String?
+  ambassadorId  String?
+  name          String // display name (copied from contact/ambassador or typed in)
+  email         String?
+  phone         String?
+  companyId     String? // participant's club
+  status        String   @default("registered") // registered | confirmed | attended | no_show | cancelled
+  paymentStatus String   @default("unpaid") // unpaid | paid | free
+  amount        Float?
+  note          String?
+  createdAt     DateTime @default(now())
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contact    Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  ambassador Ambassador? @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+  company    Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, eventId])
 }

@@ -90,4 +90,12 @@ export type PartnershipFulfillmentInput = z.input<typeof partnershipFulfillmentS
 
 export const partnershipFulfillmentUpdateSchema = partnershipFulfillmentSchema.omit({ termId: true }).partial().extend({
   paid: z.boolean().optional(),
+  // "done" turns a planned content-calendar entry into a real delivery.
+  status: z.enum(["planned", "done"]).optional(),
+});
+
+export const plannedDeliveriesSchema = z.object({
+  termId: z.string().min(1),
+  dates: z.array(z.string().min(1)).min(1, "Zadejte aspoň jedno datum"),
+  note: z.string().optional().nullable(),
 });

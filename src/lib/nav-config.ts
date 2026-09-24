@@ -33,12 +33,14 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Partnerství",
     items: [
       { label: "Ambasadoři", href: "/crm/ambassadors", icon: "Star", resource: "ambassador" },
+      { label: "Obsahový plán", href: "/crm/ambassadors/content", icon: "Clapperboard", resource: "ambassador" },
       { label: "Partneři a sponzoring", href: "/crm/partners", icon: "HeartHandshake", resource: "partner" },
     ],
   },
   {
     label: "Práce",
     items: [
+      { label: "Akce a kempy", href: "/events", icon: "Tent", resource: "event" },
       { label: "Úkoly", href: "/tasks", icon: "CheckSquare", resource: "task" },
       { label: "Kalendář", href: "/calendar", icon: "Calendar", resource: "task" },
       { label: "Reporty", href: "/reports", icon: "BarChart3", resource: "report" },
@@ -61,3 +63,13 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
+
+const ALL_HREFS = NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+
+// Highlight only the most specific item: /crm/ambassadors/content must light up
+// "Obsahový plán", not also "Ambasadoři".
+export function isNavActive(pathname: string, href: string) {
+  const matches = (h: string) => pathname === h || pathname.startsWith(h + "/");
+  if (!matches(href)) return false;
+  return !ALL_HREFS.some((other) => other.length > href.length && matches(other));
+}

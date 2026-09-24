@@ -203,6 +203,45 @@ export const PRODUCT_UNITS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Events — camps, testing, workshops
+// ---------------------------------------------------------------------------
+
+export const EVENT_TYPES = [
+  { value: "camp", label: "Kemp", color: "indigo" },
+  { value: "testing", label: "Testování", color: "sky" },
+  { value: "workshop", label: "Workshop pro trenéry", color: "violet" },
+  { value: "other", label: "Jiná akce", color: "slate" },
+] as const;
+
+export const EVENT_STATUSES = [
+  { value: "planned", label: "Připravuje se", color: "slate" },
+  { value: "open", label: "Přihlášky otevřené", color: "emerald" },
+  { value: "full", label: "Plně obsazeno", color: "amber" },
+  { value: "done", label: "Proběhla", color: "sky" },
+  { value: "cancelled", label: "Zrušena", color: "rose" },
+] as const;
+
+export const REGISTRATION_ROLES = [
+  { value: "participant", label: "Účastník", color: "slate" },
+  { value: "coach", label: "Trenér", color: "violet" },
+  { value: "guest", label: "Host / ambasador", color: "indigo" },
+] as const;
+
+export const REGISTRATION_STATUSES = [
+  { value: "registered", label: "Přihlášen", color: "sky" },
+  { value: "confirmed", label: "Potvrzen", color: "indigo" },
+  { value: "attended", label: "Zúčastnil se", color: "emerald" },
+  { value: "no_show", label: "Nedorazil", color: "amber" },
+  { value: "cancelled", label: "Odhlášen", color: "rose" },
+] as const;
+
+export const PAYMENT_STATUSES = [
+  { value: "unpaid", label: "Nezaplaceno", color: "amber" },
+  { value: "paid", label: "Zaplaceno", color: "emerald" },
+  { value: "free", label: "Zdarma", color: "slate" },
+] as const;
+
+// ---------------------------------------------------------------------------
 // Partnerships — ambassadors and partners/sponsors
 // ---------------------------------------------------------------------------
 

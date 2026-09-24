@@ -44,7 +44,13 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
     period: t.period,
     dueDate: t.dueDate?.toISOString() ?? null,
     isActive: t.isActive,
-    fulfillments: t.fulfillments.map((f) => ({
+    // Planned entries (content calendar) aren't deliveries yet — keep them apart so
+    // progress, rewards and the ledger only ever count what really happened.
+    planned: t.fulfillments
+      .filter((f) => f.status === "planned")
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .map((f) => ({ id: f.id, date: f.date.toISOString(), note: f.note })),
+    fulfillments: t.fulfillments.filter((f) => f.status !== "planned").map((f) => ({
       id: f.id,
       date: f.date.toISOString(),
       quantity: f.quantity,

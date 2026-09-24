@@ -9,7 +9,7 @@ import { ROLE_MATRIX, ROLE_NAMES, type ModuleResource } from "@/lib/rbac";
 const RESOURCE_LABELS: Record<ModuleResource, string> = {
   dashboard: "Dashboard", company: "Kluby", contact: "Kontakty", lead: "Leady", deal: "Obchody",
   product: "Produkty", quote: "Nabídky", activity: "Aktivity", task: "Úkoly", report: "Reporty", roadmap: "Roadmap",
-  ambassador: "Ambasadoři", partner: "Partneři", admin: "Administrace",
+  event: "Akce a kempy", ambassador: "Ambasadoři", partner: "Partneři", admin: "Administrace",
 };
 
 export default async function RolesPage() {

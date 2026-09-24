@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { TermFormDialog } from "@/components/partnerships/term-form-dialog";
 import { FulfillmentFormDialog } from "@/components/partnerships/fulfillment-form-dialog";
+import { PlanDeliveriesDialog } from "@/components/partnerships/plan-deliveries-dialog";
 import { deletePartnershipFulfillment, deletePartnershipTerm, updatePartnershipFulfillment } from "@/lib/actions/partnership-terms";
 import { hasDeliveryReward, isVariableTerm, termProgress, termValueLabel, trailingYear, yearlyValue, type BonusTier } from "@/lib/partnerships";
 import { findMeta, TERM_PERIODS, termTypes } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { ProductOption } from "@/lib/partnership-queries";
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, ExternalLink, Eye, Pencil, Trash2, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CalendarClock, Check, ChevronDown, ChevronUp, ExternalLink, Eye, Pencil, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type FulfillmentView = {
@@ -50,6 +51,7 @@ export type TermView = {
   period: string;
   dueDate: string | null;
   isActive: boolean;
+  planned: { id: string; date: string; note: string | null }[];
   fulfillments: FulfillmentView[];
 };
 
@@ -256,6 +258,37 @@ function TermCard({
           </div>
         ) : null}
 
+        {term.planned.length > 0 && (
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Naplánováno</div>
+            {term.planned.map((p) => {
+              const late = new Date(p.date) < new Date(new Date().toDateString());
+              return (
+                <div key={p.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                  <CalendarClock className={cn("h-3 w-3", late ? "text-rose-500" : "text-muted-foreground")} />
+                  <span className={cn("font-medium", late && "text-rose-600")}>{formatDate(p.date)}</span>
+                  {late && <StatusBadge label="Zpožděno" color="rose" />}
+                  {p.note && <span className="truncate text-muted-foreground">{p.note}</span>}
+                  {canEdit && (
+                    <span className="ml-auto flex items-center gap-1">
+                      <FulfillmentFormDialog
+                        term={term}
+                        products={termProducts.length ? termProducts : products}
+                        completing
+                        fulfillment={{ id: p.id, date: p.date, quantity: 1, productId: null, baseAmount: null, amount: null, metricValue: null, rewardAmount: null, link: null, note: p.note }}
+                        trigger={<Button size="xs" variant="outline"><Check className="h-3 w-3" /> Splněno</Button>}
+                      />
+                      <button type="button" onClick={() => handleDeleteFulfillment(p.id)} className="text-muted-foreground hover:text-destructive" title="Zrušit termín">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-2">
           {term.fulfillments.length > 0 ? (
             <button type="button" onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -265,7 +298,12 @@ function TermCard({
           ) : (
             <span className="text-xs text-muted-foreground">Zatím nic nezapsáno.</span>
           )}
-          {canEdit && term.isActive && <FulfillmentFormDialog term={term} products={termProducts.length ? termProducts : products} />}
+          {canEdit && term.isActive && (
+            <div className="flex items-center gap-1">
+              {term.direction === "they_give" && <PlanDeliveriesDialog term={term} />}
+              <FulfillmentFormDialog term={term} products={termProducts.length ? termProducts : products} />
+            </div>
+          )}
         </div>
 
         {expanded && (

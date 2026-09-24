@@ -41,10 +41,13 @@ export function FulfillmentFormDialog({
   term,
   products,
   fulfillment,
+  completing = false,
   trigger,
 }: {
   products: ProductOption[];
   fulfillment?: FulfillmentEditValues;
+  /** Confirming a planned content-calendar entry as delivered. */
+  completing?: boolean;
   trigger?: React.ReactElement;
   term: {
     id: string;
@@ -85,13 +88,13 @@ export function FulfillmentFormDialog({
     fulfillment
       ? {
           termId: term.id,
-          date: fulfillment.date.slice(0, 10),
+          date: completing ? today() : fulfillment.date.slice(0, 10),
           quantity: fulfillment.quantity,
           productId: fulfillment.productId ?? null,
           baseAmount: fulfillment.baseAmount,
           amount: fulfillment.amount,
           metricValue: fulfillment.metricValue,
-          rewardAmount: fulfillment.rewardAmount,
+          rewardAmount: fulfillment.rewardAmount ?? (rewarded ? deliveryReward(term, fulfillment.quantity, fulfillment.metricValue).total : null),
           link: fulfillment.link,
           note: fulfillment.note,
         }
@@ -121,8 +124,8 @@ export function FulfillmentFormDialog({
       if (isEdit) {
         const { termId: _termId, ...changes } = data;
         void _termId;
-        await updatePartnershipFulfillment(fulfillment!.id, changes);
-        toast.success("Záznam byl upraven.");
+        await updatePartnershipFulfillment(fulfillment!.id, completing ? { ...changes, status: "done" } : changes);
+        toast.success(completing ? "Splnění bylo zapsáno." : "Záznam byl upraven.");
       } else {
         await createPartnershipFulfillment(data);
         toast.success(weGive ? "Plnění bylo zapsáno." : "Splnění bylo zapsáno.");
@@ -220,7 +223,7 @@ export function FulfillmentFormDialog({
             <Field label="Poznámka" className="sm:col-span-2"><Textarea rows={2} {...register("note")} /></Field>
           </Section>
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Ukládám…" : isEdit ? "Uložit" : "Zapsat"}</Button>
+            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Ukládám…" : isEdit && !completing ? "Uložit" : "Zapsat"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

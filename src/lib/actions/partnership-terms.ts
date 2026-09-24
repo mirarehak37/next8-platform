@@ -1,8 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePermission, logAudit, ActionError } from "@/lib/actions/helpers";
-import { partnershipTermSchema, partnershipFulfillmentSchema, partnershipFulfillmentUpdateSchema } from "@/lib/validations/partnerships";
+import { requirePermission, logAudit, ActionError, onlyProvided } from "@/lib/actions/helpers";
+import { partnershipTermSchema, partnershipFulfillmentSchema, partnershipFulfillmentUpdateSchema, plannedDeliveriesSchema } from "@/lib/validations/partnerships";
 import { revalidatePath } from "next/cache";
 
 type SubjectType = "ambassador" | "partner";
@@ -22,6 +22,7 @@ function revalidateSubject(subjectType: string, subjectId: string) {
   if (!base) return;
   revalidatePath(base);
   revalidatePath(`${base}/${subjectId}`);
+  if (subjectType === "ambassador") revalidatePath("/crm/ambassadors/content");
 }
 
 async function assertProducts(tenantId: string, productIds: string[] | undefined) {
@@ -56,7 +57,7 @@ export async function createPartnershipTerm(data: unknown) {
 export async function updatePartnershipTerm(id: string, data: unknown) {
   const { term, user } = await requireTerm(id);
   // Subject and direction are fixed once created — only the term's content changes.
-  const parsed = partnershipTermSchema.omit({ subjectType: true, subjectId: true, direction: true }).partial().parse(data);
+  const parsed = onlyProvided(partnershipTermSchema.omit({ subjectType: true, subjectId: true, direction: true }).partial().parse(data), data);
   await assertProducts(user.tenantId, parsed.productIds);
   const { dueDate, ...rest } = parsed;
   const updated = await prisma.partnershipTerm.update({
@@ -93,7 +94,7 @@ export async function updatePartnershipFulfillment(id: string, data: unknown) {
   const fulfillment = await prisma.partnershipFulfillment.findUnique({ where: { id } });
   if (!fulfillment) throw new ActionError("Záznam nenalezen.");
   const { term, user } = await requireTerm(fulfillment.termId);
-  const { paid, date, productId, ...rest } = partnershipFulfillmentUpdateSchema.parse(data);
+  const { paid, date, productId, ...rest } = onlyProvided(partnershipFulfillmentUpdateSchema.parse(data), data);
   if (productId) await assertProducts(user.tenantId, [productId]);
   await prisma.partnershipFulfillment.update({
     where: { id },
@@ -102,6 +103,8 @@ export async function updatePartnershipFulfillment(id: string, data: unknown) {
       ...(date !== undefined && { date: new Date(date) }),
       ...(productId !== undefined && { productId: productId || null }),
       ...(paid !== undefined && { paidAt: paid ? fulfillment.paidAt ?? new Date() : null }),
+      // Completing a planned entry credits whoever confirms it.
+      ...(rest.status === "done" && fulfillment.status === "planned" && { recordedById: user.id }),
     },
   });
   await logAudit({
@@ -109,6 +112,36 @@ export async function updatePartnershipFulfillment(id: string, data: unknown) {
     action: paid !== undefined ? (paid ? "fulfillment_paid" : "fulfillment_unpaid") : "fulfillment_update", changes: { term: term.title },
   });
   revalidateSubject(term.subjectType, term.subjectId);
+}
+
+// Content calendar: schedule when an obligation (reel, post…) should be delivered.
+export async function planPartnershipDeliveries(data: unknown) {
+  const parsed = plannedDeliveriesSchema.parse(data);
+  const { term, user } = await requireTerm(parsed.termId);
+  await prisma.partnershipFulfillment.createMany({
+    data: parsed.dates.map((d) => ({
+      tenantId: user.tenantId,
+      termId: term.id,
+      date: new Date(d),
+      status: "planned",
+      note: parsed.note || null,
+      recordedById: user.id,
+    })),
+  });
+  await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: term.subjectType, entityId: term.subjectId, action: "fulfillment_plan", changes: { term: term.title } });
+  revalidateSubject(term.subjectType, term.subjectId);
+  revalidatePath("/crm/ambassadors/content");
+}
+
+// Bulk payout from the "K výplatě" list (accounting marks a whole batch at once).
+export async function markRewardsPaid(ids: string[]) {
+  const user = await requirePermission("ambassador", "edit");
+  const { count } = await prisma.partnershipFulfillment.updateMany({
+    where: { id: { in: ids }, tenantId: user.tenantId, paidAt: null, rewardAmount: { not: null } },
+    data: { paidAt: new Date() },
+  });
+  revalidatePath("/crm/ambassadors", "layout");
+  return count;
 }
 
 export async function deletePartnershipFulfillment(id: string) {

@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requirePermission, logAudit, ActionError } from "@/lib/actions/helpers";
+import { requirePermission, logAudit, ActionError, onlyProvided } from "@/lib/actions/helpers";
 import { ambassadorSchema } from "@/lib/validations/partnerships";
 import { revalidatePath } from "next/cache";
 
@@ -31,7 +31,7 @@ export async function createAmbassador(data: unknown) {
 
 export async function updateAmbassador(id: string, data: unknown) {
   const user = await requirePermission("ambassador", "edit");
-  const parsed = ambassadorSchema.partial().parse(data);
+  const parsed = onlyProvided(ambassadorSchema.partial().parse(data), data);
   const existing = await prisma.ambassador.findFirst({ where: { id, tenantId: user.tenantId } });
   if (!existing) throw new ActionError("Ambasador nenalezen.");
   const ambassador = await prisma.ambassador.update({ where: { id }, data: toData(parsed) });

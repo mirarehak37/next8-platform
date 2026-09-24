@@ -2,7 +2,7 @@
 
 import type { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requirePermission, logAudit, ActionError } from "@/lib/actions/helpers";
+import { requirePermission, logAudit, ActionError, onlyProvided } from "@/lib/actions/helpers";
 import { partnerSchema } from "@/lib/validations/partnerships";
 import { revalidatePath } from "next/cache";
 
@@ -30,7 +30,7 @@ export async function createPartner(data: unknown) {
 
 export async function updatePartner(id: string, data: unknown) {
   const user = await requirePermission("partner", "edit");
-  const parsed = partnerSchema.partial().parse(data);
+  const parsed = onlyProvided(partnerSchema.partial().parse(data), data);
   const existing = await prisma.partner.findFirst({ where: { id, tenantId: user.tenantId } });
   if (!existing) throw new ActionError("Partner nenalezen.");
   const partner = await prisma.partner.update({ where: { id }, data: toData(parsed) });
