@@ -22,6 +22,15 @@ import { formatCurrency } from "@/lib/format";
 import type { ProductOption } from "@/lib/partnership-queries";
 import { TERM_PERIODS, TERM_VALUE_TYPES, termTypes } from "@/lib/constants";
 
+const PERIOD_SUFFIX: Record<string, string> = {
+  one_off: "celkem",
+  monthly: "za měsíc",
+  quarterly: "za čtvrtletí",
+  season: "za sezónu",
+  yearly: "za rok",
+  per_event: "za každý prodej",
+};
+
 export function TermFormDialog({
   subjectType,
   subjectId,
@@ -52,6 +61,8 @@ export function TermFormDialog({
   const valueType = useWatch({ control, name: "valueType" });
   const period = useWatch({ control, name: "period" });
   const isPercent = valueType === "percent";
+  // Spell out what the amount / count refers to instead of a vague "za období".
+  const per = PERIOD_SUFFIX[period ?? "one_off"] ?? "celkem";
   // An ambassador's obligation (reel, post…) carries its own reward and bonuses,
   // so it doesn't need a separate "we pay" term.
   const isObligation = subjectType === "ambassador" && direction === "they_give";
@@ -120,7 +131,7 @@ export function TermFormDialog({
               <Input placeholder={direction === "we_give" ? "např. Měsíční odměna" : "např. 4 příspěvky na Instagramu"} {...register("title")} />
             </Field>
             {isObligation ? (
-              <Field label="Kolikrát (za období)">
+              <Field label={`Kolikrát ${per}`}>
                 <Input type="number" min={0} placeholder="např. 1" {...register("quantity")} />
               </Field>
             ) : (
@@ -184,13 +195,13 @@ export function TermFormDialog({
               </>
             ) : (
               <>
-                <Field label={period === "per_event" ? "Částka za každý prodej" : direction === "we_give" ? "Částka (za období)" : "Hodnota v Kč (za období)"}>
+                <Field label={period === "per_event" ? "Částka za každý prodej" : direction === "we_give" ? `Částka ${per}` : `Hodnota v Kč ${per}`}>
                   <Controller control={control} name="amount" render={({ field }) => (
                     <FormCurrencyInput value={field.value as number | null | undefined} onChange={field.onChange} />
                   )} />
                 </Field>
                 {period !== "per_event" && (
-                  <Field label="Počet (za období)">
+                  <Field label={`Počet ${per}`}>
                     <Input type="number" min={0} placeholder="např. 4" {...register("quantity")} />
                   </Field>
                 )}
