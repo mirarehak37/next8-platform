@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { FlorbalImportButton } from "./florbal-import-button";
 import { TalentYouthImportButton } from "./talent-youth-import-button";
+import { ClubExportImport } from "./club-export-import";
 
 export default async function FlorbalImportPage() {
   const session = await auth();
@@ -16,6 +17,7 @@ export default async function FlorbalImportPage() {
         breadcrumbs={[{ label: "Admin" }, { label: "Import klubů" }]}
       />
       <div className="p-6 max-w-lg space-y-6">
+        <ClubExportImport />
         <FlorbalImportButton />
         <TalentYouthImportButton />
       </div>
