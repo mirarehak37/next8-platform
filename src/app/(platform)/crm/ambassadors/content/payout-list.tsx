@@ -21,6 +21,7 @@ export type PayoutRow = {
   metric: string;
   amount: number;
   link: string | null;
+  note: string | null;
   bankAccount: string | null;
   registrationNumber: string | null;
 };
@@ -76,7 +77,7 @@ export function PayoutList({ rows, canEdit }: { rows: PayoutRow[]; canEdit: bool
         IČO: r.registrationNumber ?? "",
         "Číslo účtu": r.bankAccount ?? "",
         Povinnost: r.term,
-        [r.metric]: r.metricValue ?? "",
+        Detail: [r.metricValue != null ? `${r.metricValue} ${r.metric}` : "", r.note ?? ""].filter(Boolean).join(" · "),
         "Částka (Kč)": r.amount,
         Odkaz: r.link ?? "",
       })),
@@ -118,7 +119,7 @@ export function PayoutList({ rows, canEdit }: { rows: PayoutRow[]; canEdit: bool
                 <label key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs pl-6 cursor-pointer">
                   {canEdit && <input type="checkbox" className="h-3.5 w-3.5 -ml-6 accent-[#FF1947]" checked={selected.has(r.id)} onChange={(e) => toggle([r.id], e.target.checked)} />}
                   <span className="text-muted-foreground w-20">{formatDate(r.date)}</span>
-                  <span className="flex-1 min-w-[120px]">{r.term}</span>
+                  <span className="flex-1 min-w-[120px]">{r.term}{r.note && <span className="text-muted-foreground"> · {r.note}</span>}</span>
                   {r.metricValue != null && <span className="text-muted-foreground">{numberFormat.format(r.metricValue)} {r.metric}</span>}
                   {r.link && (
                     <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" onClick={(e) => e.stopPropagation()}>

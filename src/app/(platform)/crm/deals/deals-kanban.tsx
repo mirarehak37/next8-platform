@@ -11,6 +11,7 @@ import { moveDealStage } from "@/lib/actions/deals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DealFormDialog } from "@/components/crm/deal-form-dialog";
+import type { DealFormExtras } from "@/lib/deal-form-extras";
 import { formatCurrency, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +35,9 @@ export function DealsKanban({
   companies,
   contacts = [],
   pipelineId,
+  extras,
 }: {
+  extras?: DealFormExtras;
   stages: KanbanStage[];
   deals: KanbanDeal[];
   owners: { id: string; name: string }[];
@@ -89,7 +92,7 @@ export function DealsKanban({
   const activeDeal = items.find((d) => d.id === activeId);
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext id="deals-kanban" sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex gap-3 overflow-x-auto pb-4">
         {stages.map((stage) => {
           const stageDeals = byStage.get(stage.id) ?? [];
@@ -101,6 +104,7 @@ export function DealsKanban({
               ))}
               {stageDeals.length === 0 && <div className="text-xs text-muted-foreground text-center py-6 border border-dashed rounded-md">Přetáhněte sem obchod</div>}
               <DealFormDialog
+                extras={extras}
                 owners={owners}
                 companies={companies}
                 contacts={contacts}

@@ -237,7 +237,7 @@ function TermCard({
           </div>
         )}
 
-        {rewarded && unpaid > 0 && (
+        {unpaid > 0 && (
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">K výplatě (nevyplaceno)</span>
             <span className="font-semibold text-[#FF1947]">{formatCurrency(unpaid)}</span>

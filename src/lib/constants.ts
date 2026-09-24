@@ -84,7 +84,11 @@ export const ACTIVITY_TYPES = [
 
 export const COMPANY_SIZE_BANDS = ["1-10", "11-50", "51-200", "201-1000", "1000+"] as const;
 
+// Source that links a deal to an ambassador (and books his commission when won).
+export const AMBASSADOR_SOURCE = "Ambasador";
+
 export const LEAD_SOURCES = [
+  "Ambasador",
   "Web",
   "Doporučení",
   "Veletrh",

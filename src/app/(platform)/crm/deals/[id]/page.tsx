@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DealFormDialog, DealEditTrigger } from "@/components/crm/deal-form-dialog";
+import { loadDealFormExtras } from "@/lib/deal-form-extras";
 import { Building2, Handshake, FileText, Package } from "lucide-react";
 import { DEAL_STATUSES, findMeta, ACTIVITY_TYPES } from "@/lib/constants";
 import { formatCurrency, formatDate, formatDateTime, initials } from "@/lib/format";
@@ -27,11 +28,15 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       contacts: { include: { contact: true } },
       products: true,
       quotes: true,
+      clubTeam: { select: { name: true, category: true } },
+      product: { select: { name: true } },
+      ambassador: { select: { id: true, firstName: true, lastName: true } },
+      commissionTerm: { select: { title: true, percent: true } },
     },
   });
   if (!deal) notFound();
 
-  const [activities, owners, companies, contacts] = await Promise.all([
+  const [activities, owners, companies, contacts, extras, commission] = await Promise.all([
     prisma.activity.findMany({
       where: { tenantId: user.tenantId, subjectType: "deal", subjectId: id },
       include: { owner: { select: { name: true } } },
@@ -40,6 +45,8 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.contact.findMany({ where: { tenantId: user.tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } }),
+    loadDealFormExtras(user.tenantId),
+    prisma.partnershipFulfillment.findUnique({ where: { dealId: id }, select: { rewardAmount: true, paidAt: true } }),
   ]);
   const contactOptions = contacts.map((c) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }));
 
@@ -54,6 +61,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         breadcrumbs={[{ label: "CRM" }, { label: "Obchodní případy", href: "/crm/deals" }, { label: deal.name }]}
         actions={
           <DealFormDialog
+            extras={extras}
             owners={owners}
             companies={companies}
             contacts={contactOptions}
@@ -73,6 +81,14 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               nextStep: deal.nextStep,
               nextStepDate: deal.nextStepDate?.toISOString().slice(0, 10),
               description: deal.description,
+              clubTeamId: deal.clubTeamId,
+              productId: deal.productId,
+              customPackage: deal.customPackage,
+              billingPeriod: deal.billingPeriod,
+              listPrice: deal.listPrice,
+              discountPercent: deal.discountPercent,
+              ambassadorId: deal.ambassadorId,
+              commissionTermId: deal.commissionTermId,
             }}
             trigger={<DealEditTrigger />}
           />
@@ -111,6 +127,30 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                   {deal.expectedCloseDate && <span>Očekávané uzavření: {formatDate(deal.expectedCloseDate)}</span>}
                   {deal.source && <span>Zdroj: {deal.source}</span>}
                 </div>
+                {(deal.clubTeam || deal.product || deal.customPackage) && (
+                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+                    {deal.clubTeam && <span><span className="text-muted-foreground">Tým:</span> {deal.clubTeam.name} ({deal.clubTeam.category})</span>}
+                    {(deal.product || deal.customPackage) && (
+                      <span>
+                        <span className="text-muted-foreground">Balíček:</span> {deal.product?.name ?? `Individuální – ${deal.customPackage}`}
+                        {deal.listPrice ? <span className="text-muted-foreground"> · ceník {formatCurrency(deal.listPrice)}{deal.discountPercent ? `, sleva ${deal.discountPercent} %` : ""}</span> : null}
+                        {deal.billingPeriod && <span className="text-muted-foreground"> · {deal.billingPeriod === "yearly" ? "ročně" : "měsíčně"}</span>}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {deal.ambassador && (
+                  <div className="text-sm bg-[#FF1947]/5 rounded-md px-2.5 py-1.5 w-fit">
+                    Ambasador:{" "}
+                    <Link href={`/crm/ambassadors/${deal.ambassador.id}`} className="font-medium hover:underline">{deal.ambassador.firstName} {deal.ambassador.lastName}</Link>
+                    {deal.commissionTerm && <span className="text-muted-foreground"> · {deal.commissionTerm.title} ({deal.commissionTerm.percent} %)</span>}
+                    {commission?.rewardAmount != null ? (
+                      <span> · provize <strong>{formatCurrency(commission.rewardAmount)}</strong> {commission.paidAt ? "(vyplaceno)" : "(k výplatě)"}</span>
+                    ) : deal.commissionTerm?.percent ? (
+                      <span className="text-muted-foreground"> · po vyhrání {formatCurrency(Math.round(deal.value * deal.commissionTerm.percent) / 100)}</span>
+                    ) : null}
+                  </div>
+                )}
                 {deal.nextStep && (
                   <div className="text-sm bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 rounded-md px-2.5 py-1.5 w-fit">
                     Další krok: {deal.nextStep} {deal.nextStepDate && `(${formatDate(deal.nextStepDate)})`}

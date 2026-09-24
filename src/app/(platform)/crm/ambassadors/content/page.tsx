@@ -119,7 +119,8 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
     .sort((a, b) => (a.state === "late" ? 0 : a.state === "running" ? 1 : 2) - (b.state === "late" ? 0 : b.state === "running" ? 1 : 2));
 
   // --- Unpaid rewards (for accounting)
-  const payouts: PayoutRow[] = terms.flatMap((t) =>
+  // Rewards for deliveries and commissions booked from won deals alike.
+  const payouts: PayoutRow[] = allTerms.flatMap((t) =>
     t.fulfillments
       .filter((f) => f.status === "done" && f.rewardAmount && !f.paidAt)
       .map((f) => {
@@ -131,9 +132,10 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
           ambassador: name(t.subjectId),
           term: t.title,
           metricValue: f.metricValue,
-          metric: t.bonusMetric || "zhlédnutí",
+          metric: t.direction === "we_give" ? "provize" : t.bonusMetric || "zhlédnutí",
           amount: f.rewardAmount!,
           link: f.link,
+          note: f.note,
           bankAccount: a?.bankAccount ?? null,
           registrationNumber: a?.registrationNumber ?? null,
         };
