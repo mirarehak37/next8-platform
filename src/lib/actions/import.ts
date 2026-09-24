@@ -1,10 +1,13 @@
 "use server";
 
+import { randomUUID } from "crypto";
+import type { ClubTeam, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, logAudit } from "@/lib/actions/helpers";
 import { revalidatePath } from "next/cache";
 import type { ImportEntity } from "@/lib/import-config";
 import { splitName } from "@/lib/club-export";
+import { PositionCollector } from "@/lib/contact-positions";
 
 export type ImportRow = Record<string, string>;
 export type ImportResult = { created: number; skipped: number; linked?: number; errors: { row: number; reason: string }[] };
@@ -118,10 +121,14 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
 
 const norm = (v: string | null | undefined) => (v ?? "").trim().toLowerCase();
 
-// Contacts: one row = one person, optionally tied to a club and a team. The same
-// person appearing on several rows (e.g. contact for 5 teams) becomes ONE contact
-// linked to all of them — matched by e-mail anywhere in the CRM, else by name
-// within the club.
+// Contacts: one row = one person (+ up to two extra people of the same club),
+// optionally tied to a club and a team. The same person appearing on several rows
+// (e.g. contact for 5 teams) becomes ONE contact linked to all of them — matched by
+// e-mail anywhere in the CRM, else by name within the club.
+//
+// Everything is resolved in memory first and written with a handful of bulk
+// queries: on Vercel every query is a network round trip to the database, so
+// per-row inserts made a 3 000-row file take minutes and hit the time limit.
 async function importContacts(user: { id: string; tenantId: string }, rows: ImportRow[], result: ImportResult) {
   const tenantId = user.tenantId;
   result.linked = 0;
@@ -139,51 +146,55 @@ async function importContacts(user: { id: string; tenantId: string }, rows: Impo
   const companyByName = new Map(companies.map((c) => [norm(c.name), c]));
   const companyIds = companies.map((c) => c.id);
 
-  const teams = companyIds.length
-    ? await prisma.clubTeam.findMany({ where: { tenantId, companyId: { in: companyIds } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] })
-    : [];
-
-  const emails = [...new Set(rows.flatMap((r) => [r.email, r.p2Email, r.p3Email]).map(norm).filter(Boolean))];
-  const known = await prisma.contact.findMany({
-    where: {
-      tenantId,
-      OR: [
+  const [teams, known] = await Promise.all([
+    companyIds.length
+      ? prisma.clubTeam.findMany({ where: { tenantId, companyId: { in: companyIds } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] })
+      : Promise.resolve([] as ClubTeam[]),
+    (() => {
+      const emails = [...new Set(rows.flatMap((r) => [r.email, r.p2Email, r.p3Email]).map(norm).filter(Boolean))];
+      const or = [
         ...(emails.length ? [{ email: { in: emails, mode: "insensitive" as const } }] : []),
         ...(companyIds.length ? [{ companies: { some: { companyId: { in: companyIds } } } }] : []),
-      ],
-    },
-    select: { id: true, firstName: true, lastName: true, email: true, phone: true, companies: { select: { companyId: true } } },
-  });
+      ];
+      return or.length
+        ? prisma.contact.findMany({ where: { tenantId, OR: or }, select: { id: true, firstName: true, lastName: true, email: true, companies: { select: { companyId: true } } } })
+        : Promise.resolve([]);
+    })(),
+  ]);
   const byEmail = new Map(known.filter((c) => c.email).map((c) => [norm(c.email), c.id]));
   const byClubName = new Map<string, string>();
   for (const c of known) for (const cc of c.companies) byClubName.set(`${cc.companyId}|${norm(`${c.firstName} ${c.lastName}`)}`, c.id);
+
   const touched = new Set<string>();
   const usedTeams = new Set<string>();
+  const positions = new PositionCollector();
+  const newContacts: Prisma.ContactCreateManyInput[] = [];
+  const newTeams: Prisma.ClubTeamCreateManyInput[] = [];
+  const clubLinks: Prisma.CompanyContactCreateManyInput[] = [];
+  const teamLinks: Prisma.ClubTeamContactCreateManyInput[] = [];
 
-  // Finds (by e-mail, else by name within the club) or creates one person.
-  async function personId(p: { first: string; last: string; titleBefore?: string | null; titleAfter?: string | null; email?: string; phone?: string; mobile?: string; jobTitle?: string }, companyId: string | null) {
+  // Finds (by e-mail, else by name within the club) or queues one new person.
+  function personId(p: { first: string; last: string; titleBefore?: string | null; titleAfter?: string | null; email?: string; phone?: string; mobile?: string }, companyId: string | null) {
     const emailKey = norm(p.email);
     const nameKey = companyId ? `${companyId}|${norm(`${p.first} ${p.last}`)}` : null;
     let id = (emailKey && byEmail.get(emailKey)) || (nameKey && byClubName.get(nameKey)) || null;
     if (id) {
       if (!touched.has(id)) result.linked!++;
     } else {
-      const created = await prisma.contact.create({
-        data: {
-          tenantId,
-          firstName: p.first,
-          lastName: p.last,
-          titleBefore: p.titleBefore ?? undefined,
-          titleAfter: p.titleAfter ?? undefined,
-          email: p.email?.trim() || undefined,
-          phone: p.phone?.trim() || undefined,
-          mobile: p.mobile?.trim() || undefined,
-          jobTitle: p.jobTitle?.trim() || undefined,
-          source: "Import",
-          ownerId: user.id,
-        },
+      id = randomUUID();
+      newContacts.push({
+        id,
+        tenantId,
+        firstName: p.first,
+        lastName: p.last,
+        titleBefore: p.titleBefore ?? undefined,
+        titleAfter: p.titleAfter ?? undefined,
+        email: p.email?.trim() || undefined,
+        phone: p.phone?.trim() || undefined,
+        mobile: p.mobile?.trim() || undefined,
+        source: "Import",
+        ownerId: user.id,
       });
-      id = created.id;
       result.created++;
     }
     touched.add(id);
@@ -213,24 +224,21 @@ async function importContacts(user: { id: string; tenantId: string }, rows: Impo
 
     // Extra people (secretary, chairman…) belong to the club, not to a team.
     for (const x of extras) {
-      const id = await personId({ first: x.firstName, last: x.lastName, titleBefore: x.titleBefore, titleAfter: x.titleAfter, email: x.email, phone: x.phone, jobTitle: x.role ?? undefined }, company?.id ?? null);
-      if (company) {
-        await prisma.companyContact.createMany({
-          data: [{ companyId: company.id, contactId: id, role: x.role, isPrimary: !!x.role && /sekret/i.test(x.role) }],
-          skipDuplicates: true,
-        });
-      }
+      const id = personId({ first: x.firstName, last: x.lastName, titleBefore: x.titleBefore, titleAfter: x.titleAfter, email: x.email, phone: x.phone }, company?.id ?? null);
+      positions.add(id, x.role);
+      if (company) clubLinks.push({ companyId: company.id, contactId: id, role: x.role, isPrimary: !!x.role && /sekret/i.test(x.role) });
     }
     if (!firstName || !lastName) continue;
 
-    const contactId = await personId(
-      { first: firstName, last: lastName, titleBefore: split?.titleBefore, titleAfter: split?.titleAfter, email: r.email, phone: r.phone, mobile: r.mobile, jobTitle: r.jobTitle?.trim() || r.role?.trim() },
+    const contactId = personId(
+      { first: firstName, last: lastName, titleBefore: split?.titleBefore, titleAfter: split?.titleAfter, email: r.email, phone: r.phone, mobile: r.mobile },
       company?.id ?? null,
     );
-
+    // Position: explicit Pozice column, else the role, else "team contact" for team rows.
+    positions.add(contactId, r.jobTitle?.trim() || r.role?.trim() || (company && r.teamCategory?.trim() ? "Kontaktní osoba týmu" : null));
     if (!company) continue;
 
-    // Team: match by category (+ competition / name), create it if the club doesn't have it yet.
+    // Team: match by category (+ competition / name); queue it if the club doesn't have it.
     let teamId: string | null = null;
     const category = r.teamCategory?.trim();
     if (category) {
@@ -247,21 +255,29 @@ async function importContacts(user: { id: string; tenantId: string }, rows: Impo
         (league ? pick((t) => base(t.league) === base(r.teamLeague)) : undefined) ??
         (!league && !teamName ? pick(() => true) : undefined);
       if (team) teamId = team.id;
-      if (teamId) usedTeams.add(teamId);
       else {
-        const created = await prisma.clubTeam.create({
-          data: { tenantId, companyId: company.id, category, name: r.teamName?.trim() || company.name, league: r.teamLeague?.trim() || undefined },
-        });
+        const created = {
+          id: randomUUID(), tenantId, companyId: company.id, category,
+          name: r.teamName?.trim() || company.name, league: r.teamLeague?.trim() || null,
+          externalId: null, createdAt: new Date(), updatedAt: new Date(),
+        };
+        newTeams.push(created);
         teams.push(created);
         teamId = created.id;
-        usedTeams.add(teamId);
       }
+      usedTeams.add(teamId);
     }
 
-    const role = r.role?.trim() || (teamId ? "Kontaktní osoba týmu" : null);
-    await prisma.companyContact.createMany({ data: [{ companyId: company.id, contactId, role }], skipDuplicates: true });
-    if (teamId) {
-      await prisma.clubTeamContact.createMany({ data: [{ clubTeamId: teamId, contactId, role: r.role?.trim() || "Kontaktní osoba" }], skipDuplicates: true });
-    }
+    clubLinks.push({ companyId: company.id, contactId, role: r.role?.trim() || (teamId ? "Kontaktní osoba týmu" : null) });
+    if (teamId) teamLinks.push({ clubTeamId: teamId, contactId, role: r.role?.trim() || "Kontaktní osoba" });
   }
+
+  // Bulk writes — parents before the links that reference them.
+  if (newContacts.length) await prisma.contact.createMany({ data: newContacts });
+  if (newTeams.length) await prisma.clubTeam.createMany({ data: newTeams });
+  // First role wins per person + club (a Map keeps the last, so feed it reversed).
+  const club = [...new Map([...clubLinks].reverse().map((l) => [`${l.companyId}|${l.contactId}`, l])).values()];
+  if (club.length) await prisma.companyContact.createMany({ data: club, skipDuplicates: true });
+  if (teamLinks.length) await prisma.clubTeamContact.createMany({ data: teamLinks, skipDuplicates: true });
+  await positions.apply(tenantId);
 }

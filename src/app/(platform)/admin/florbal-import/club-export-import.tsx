@@ -10,7 +10,7 @@ import { Upload } from "lucide-react";
 
 const BATCH = 20; // clubs per request — keeps each call well inside Vercel's time limit
 
-const EMPTY: ClubExportResult = { clubsUpdated: 0, clubsCreated: 0, contactsCreated: 0, contactsMatched: 0, clubLinks: 0, teamLinks: 0, teamsCreated: 0 };
+const EMPTY: ClubExportResult = { clubsUpdated: 0, clubsCreated: 0, contactsCreated: 0, contactsMatched: 0, clubLinks: 0, teamLinks: 0, teamsCreated: 0, positionsUpdated: 0 };
 
 export function ClubExportImport() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +92,7 @@ export function ClubExportImport() {
             <div>Vazby kontakt ↔ klub: <strong>{result.clubLinks}</strong></div>
             <div>Vazby kontakt ↔ tým: <strong>{result.teamLinks}</strong></div>
             <div>Nově založené týmy: <strong>{result.teamsCreated}</strong></div>
+            <div>Doplněné pozice: <strong>{result.positionsUpdated}</strong></div>
           </div>
         )}
       </CardContent>
