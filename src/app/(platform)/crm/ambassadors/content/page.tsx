@@ -15,6 +15,11 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { CalendarClock, AlertTriangle, CheckCircle2, Wallet } from "lucide-react";
 import { PayoutList, type PayoutRow } from "./payout-list";
 
+function daysLabel(date: Date, today: Date) {
+  const days = Math.round((date.getTime() - today.getTime()) / 86400000);
+  return days <= 0 ? "dnes" : days === 1 ? "zítra" : `za ${days} dní`;
+}
+
 const PERIOD_NOW: Record<string, string> = { monthly: "tento měsíc", quarterly: "toto čtvrtletí", season: "tuto sezónu", yearly: "letos", one_off: "celkem" };
 
 export default async function ContentPlanPage({ searchParams }: { searchParams: Promise<{ y?: string; m?: string; tab?: string }> }) {
@@ -32,30 +37,69 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
     select: { id: true, firstName: true, lastName: true, bankAccount: true, registrationNumber: true, billingType: true },
   });
   const byId = new Map(ambassadors.map((a) => [a.id, a]));
-  const terms = await prisma.partnershipTerm.findMany({
-    where: { tenantId: user.tenantId, subjectType: "ambassador", direction: "they_give", subjectId: { in: [...byId.keys()] } },
+  const allTerms = await prisma.partnershipTerm.findMany({
+    where: { tenantId: user.tenantId, subjectType: "ambassador", subjectId: { in: [...byId.keys()] } },
     include: { fulfillments: { orderBy: { date: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
+  // Obligations = what ambassadors must deliver; our side only contributes deadlines.
+  const terms = allTerms.filter((t) => t.direction === "they_give");
   const name = (id: string) => {
     const a = byId.get(id);
     return a ? `${a.firstName} ${a.lastName}` : "—";
   };
 
-  // --- Calendar: planned (grey / red when late) and delivered (green) content.
-  const calendar = new Map<number, CalendarItem[]>();
-  for (const t of terms) {
-    for (const f of t.fulfillments) {
-      if (f.date < start || f.date >= end) continue;
-      const planned = f.status === "planned";
-      const late = planned && f.date < today;
-      addToDays(calendar, year, month, f.date, null, {
-        label: `${planned ? (late ? "⚠ " : "") : "✓ "}${name(t.subjectId)} · ${t.title}`,
-        href: `/crm/ambassadors/${t.subjectId}`,
-        tone: late ? "rose" : planned ? "default" : "emerald",
+  // --- Agenda: every dated item — planned content, deliveries and the terms'
+  // own "Termín splnění" deadlines (people often set only those).
+  type AgendaItem = {
+    date: Date;
+    ambassadorId: string;
+    title: string;
+    kind: "planned" | "done" | "deadline" | "our_deadline";
+    state: "late" | "upcoming" | "done";
+    note: string | null;
+  };
+  const agenda: AgendaItem[] = [];
+  for (const t of allTerms) {
+    const done = t.fulfillments.filter((f) => f.status === "done");
+    if (t.direction === "they_give") {
+      for (const f of t.fulfillments) {
+        const planned = f.status === "planned";
+        agenda.push({
+          date: f.date, ambassadorId: t.subjectId, title: t.title, kind: planned ? "planned" : "done",
+          state: planned ? (f.date < today ? "late" : "upcoming") : "done", note: f.note,
+        });
+      }
+    }
+    if (t.dueDate && t.isActive) {
+      // A deadline is met once the term's quota is reached (or anything was delivered, if it has no count).
+      const progress = termProgress({ ...t, fulfillments: done }, done);
+      const met = progress.ratio !== null ? progress.ratio >= 1 : done.length > 0;
+      agenda.push({
+        date: t.dueDate, ambassadorId: t.subjectId, title: t.title,
+        kind: t.direction === "they_give" ? "deadline" : "our_deadline",
+        state: met ? "done" : t.dueDate < today ? "late" : "upcoming", note: t.description,
       });
     }
   }
+  agenda.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const KIND_PREFIX: Record<AgendaItem["kind"], string> = { planned: "", done: "✓ ", deadline: "⏰ ", our_deadline: "💳 " };
+  const calendar = new Map<number, CalendarItem[]>();
+  for (const it of agenda) {
+    if (it.date < start || it.date >= end) continue;
+    addToDays(calendar, year, month, it.date, null, {
+      label: `${it.state === "late" ? "⚠ " : KIND_PREFIX[it.kind]}${name(it.ambassadorId)} · ${it.title}`,
+      title: `${name(it.ambassadorId)} · ${it.title}${it.kind === "deadline" ? " (termín splnění)" : it.kind === "our_deadline" ? " (náš termín)" : ""}${it.note ? ` — ${it.note}` : ""}`,
+      href: `/crm/ambassadors/${it.ambassadorId}`,
+      tone: it.state === "late" ? "rose" : it.state === "done" ? "emerald" : it.kind === "planned" ? "default" : "amber",
+    });
+  }
+  // Below the grid: everything overdue plus the next 60 days, as a readable list.
+  const horizon = new Date(today);
+  horizon.setDate(horizon.getDate() + 60);
+  const upcoming = agenda.filter((it) => it.state === "late" || (it.state === "upcoming" && it.date <= horizon));
+  const KIND_LABEL: Record<AgendaItem["kind"], string> = { planned: "Naplánováno", done: "Splněno", deadline: "Termín splnění", our_deadline: "Náš termín" };
 
   // --- Obligations overview
   const rows = terms
@@ -64,7 +108,9 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
       const done = t.fulfillments.filter((f) => f.status === "done");
       const planned = t.fulfillments.filter((f) => f.status === "planned");
       const late = planned.filter((f) => f.date < today);
-      const next = planned.find((f) => f.date >= today);
+      const nextPlanned = planned.find((f) => f.date >= today)?.date;
+      const nextDeadline = t.dueDate && t.dueDate >= today ? t.dueDate : undefined;
+      const next = [nextPlanned, nextDeadline].filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0];
       const progress = termProgress({ ...t, fulfillments: done }, done);
       const pastDue = !!t.dueDate && t.dueDate < today && progress.ratio !== null && progress.ratio < 1;
       const state = late.length || pastDue ? "late" : progress.ratio === 1 ? "done" : "running";
@@ -94,8 +140,8 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
       }),
   );
 
-  const plannedThisMonth = terms.flatMap((t) => t.fulfillments).filter((f) => f.status === "planned" && f.date >= start && f.date < end).length;
-  const lateCount = rows.reduce((s, r) => s + r.late, 0) + rows.filter((r) => r.state === "late" && r.late === 0).length;
+  const plannedThisMonth = agenda.filter((it) => it.kind !== "done" && it.date >= start && it.date < end).length;
+  const lateCount = agenda.filter((it) => it.state === "late").length;
   const doneThisMonth = terms.flatMap((t) => t.fulfillments).filter((f) => f.status === "done" && f.date >= start && f.date < end).length;
   const toPay = payouts.reduce((s, p) => s + p.amount, 0);
   const periodLabel = (p: string) => TERM_PERIODS.find((x) => x.value === p)?.label ?? p;
@@ -110,7 +156,7 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
       />
       <div className="p-6 space-y-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard label="Naplánováno v měsíci" value={String(plannedThisMonth)} icon={CalendarClock} />
+          <KpiCard label="Termíny v měsíci" value={String(plannedThisMonth)} icon={CalendarClock} />
           <KpiCard label="Splněno v měsíci" value={String(doneThisMonth)} icon={CheckCircle2} />
           <KpiCard label="Zpožděné povinnosti" value={String(lateCount)} hint="po termínu a nesplněné" icon={AlertTriangle} />
           <KpiCard label="K výplatě" value={formatCurrency(toPay)} hint={`${payouts.length} odměn`} icon={Wallet} />
@@ -125,11 +171,34 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
 
           <TabsContent value="calendar" className="pt-4 space-y-3">
             <MonthCalendar year={year} month={month} byDay={calendar} maxPerDay={4} />
-            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><StatusBadge label="Naplánováno" color="slate" /></span>
-              <span className="flex items-center gap-1.5"><StatusBadge label="✓ Splněno" color="emerald" /></span>
-              <span className="flex items-center gap-1.5"><StatusBadge label="⚠ Zpožděno" color="rose" /></span>
-              <span>Termíny se plánují u ambasadora → Co musí udělat → Naplánovat.</span>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <StatusBadge label="Naplánováno" color="slate" />
+              <StatusBadge label="⏰ Termín splnění" color="amber" />
+              <StatusBadge label="💳 Náš termín" color="amber" />
+              <StatusBadge label="✓ Splněno" color="emerald" />
+              <StatusBadge label="⚠ Zpožděno" color="rose" />
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <h2 className="text-sm font-semibold">Co je potřeba udělat (zpožděné + dalších 60 dní)</h2>
+              {upcoming.length === 0 && (
+                <div className="py-8 text-center text-sm text-muted-foreground border rounded-md border-dashed">
+                  Nic naplánovaného. U ambasadora zadej u povinnosti „Termín splnění“ nebo klikni na „Naplánovat“.
+                </div>
+              )}
+              {upcoming.map((it, i) => (
+                <Card key={i}>
+                  <CardContent className="py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <div className={`w-24 shrink-0 text-sm font-semibold ${it.state === "late" ? "text-rose-600" : ""}`}>{formatDate(it.date)}</div>
+                    <div className="min-w-[160px] flex-1">
+                      <Link href={`/crm/ambassadors/${it.ambassadorId}`} className="text-sm font-medium hover:underline">{name(it.ambassadorId)}</Link>
+                      <div className="text-xs text-muted-foreground">{it.title}{it.note ? ` — ${it.note}` : ""}</div>
+                    </div>
+                    <StatusBadge label={KIND_LABEL[it.kind]} color={it.kind === "planned" ? "slate" : "amber"} />
+                    {it.state === "late" ? <StatusBadge label="Zpožděno" color="rose" /> : <StatusBadge label={daysLabel(it.date, today)} color="sky" />}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
 
@@ -158,7 +227,7 @@ export default async function ContentPlanPage({ searchParams }: { searchParams: 
                   </div>
                   <div className="text-xs min-w-[130px]">
                     <div className="text-muted-foreground">Další termín</div>
-                    <div className="font-medium">{next ? formatDate(next.date) : "nenaplánováno"}</div>
+                    <div className="font-medium">{next ? formatDate(next) : "nenaplánováno"}</div>
                   </div>
                   <div className="shrink-0">
                     {state === "late" ? (

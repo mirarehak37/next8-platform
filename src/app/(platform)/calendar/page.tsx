@@ -15,7 +15,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const showEvents = can(user.role, "event", "view");
   const showContent = can(user.role, "ambassador", "view");
 
-  const [tasks, activities, events, content] = await Promise.all([
+  const showPartners = can(user.role, "partner", "view");
+  const [tasks, activities, events, content, deadlines] = await Promise.all([
     prisma.task.findMany({
       where: { tenantId: user.tenantId, dueDate: { gte: rangeStart, lt: rangeEnd } },
       include: { assignee: { select: { name: true } } },
@@ -37,9 +38,24 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           include: { term: { select: { title: true, subjectId: true } } },
         })
       : [],
+    // "Termín splnění" deadlines of ambassador / partner terms.
+    showContent || showPartners
+      ? prisma.partnershipTerm.findMany({
+          where: {
+            tenantId: user.tenantId,
+            isActive: true,
+            dueDate: { gte: rangeStart, lt: rangeEnd },
+            subjectType: { in: [...(showContent ? ["ambassador"] : []), ...(showPartners ? ["partner"] : [])] },
+          },
+          select: { title: true, subjectType: true, subjectId: true, dueDate: true, _count: { select: { fulfillments: { where: { status: "done" } } } } },
+        })
+      : [],
   ]);
 
-  const ambassadorIds = [...new Set(content.map((c) => c.term.subjectId))];
+  const ambassadorIds = [...new Set([...content.map((c) => c.term.subjectId), ...deadlines.filter((d) => d.subjectType === "ambassador").map((d) => d.subjectId)])];
+  const partnerIds = [...new Set(deadlines.filter((d) => d.subjectType === "partner").map((d) => d.subjectId))];
+  const partners = partnerIds.length ? await prisma.partner.findMany({ where: { id: { in: partnerIds } }, select: { id: true, name: true } }) : [];
+  const partnerName = new Map(partners.map((p) => [p.id, p.name]));
   const ambassadors = ambassadorIds.length
     ? await prisma.ambassador.findMany({ where: { id: { in: ambassadorIds } }, select: { id: true, firstName: true, lastName: true } })
     : [];
@@ -66,6 +82,20 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     });
   }
 
+  for (const d of deadlines) {
+    if (!d.dueDate) continue;
+    const isAmb = d.subjectType === "ambassador";
+    const who = isAmb ? ambassadorName.get(d.subjectId) : partnerName.get(d.subjectId);
+    const done = d._count.fulfillments > 0;
+    const late = !done && d.dueDate < today;
+    addToDays(byDay, year, month, d.dueDate, null, {
+      label: `${done ? "✓ " : late ? "⚠ " : "⏰ "}${who ?? ""} · ${d.title}`,
+      title: `Termín splnění: ${who ?? ""} · ${d.title}`,
+      href: `/crm/${isAmb ? "ambassadors" : "partners"}/${d.subjectId}`,
+      tone: done ? "emerald" : late ? "rose" : "amber",
+    });
+  }
+
   return (
     <div>
       <PageHeader
@@ -80,7 +110,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           {showEvents && <span className="flex items-center gap-1.5"><StatusBadge label="Akce" color="indigo" /> kempy, testování, workshopy</span>}
           <span className="flex items-center gap-1.5"><StatusBadge label="Úkoly" color="sky" /> termíny úkolů</span>
           <span className="flex items-center gap-1.5"><StatusBadge label="Aktivity" color="violet" /> naplánované schůzky a hovory</span>
-          {showContent && <span className="flex items-center gap-1.5"><StatusBadge label="Obsah" color="amber" /> naplánované reely a posty ambasadorů</span>}
+          {(showContent || showPartners) && <span className="flex items-center gap-1.5"><StatusBadge label="Obsah / termíny" color="amber" /> naplánované reely a termíny splnění ambasadorů a partnerů</span>}
         </div>
       </div>
     </div>
