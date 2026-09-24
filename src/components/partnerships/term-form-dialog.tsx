@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller, useWatch, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { FormSelect } from "@/components/form-select";
 import { FormCurrencyInput } from "@/components/form-currency-input";
 import { Section, Field } from "@/components/partnerships/form-parts";
-import { Check, Plus } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type { ProductOption } from "@/lib/partnership-queries";
 import { TERM_PERIODS, TERM_VALUE_TYPES, termTypes } from "@/lib/constants";
@@ -41,7 +41,7 @@ export function TermFormDialog({
   const router = useRouter();
   const isEdit = !!term;
   const types = termTypes(subjectType, direction);
-  const blank: PartnershipTermInput = { subjectType, subjectId, direction, type: types[0].value, title: "", valueType: "fixed", productIds: [], period: "one_off", isActive: true };
+  const blank: PartnershipTermInput = { subjectType, subjectId, direction, type: types[0].value, title: "", valueType: "fixed", productIds: [], bonusTiers: [], bonusMetric: subjectType === "ambassador" && direction === "they_give" ? "zhlédnutí" : null, period: "one_off", isActive: true };
 
   const {
     register, handleSubmit, control, formState: { errors, isSubmitting }, reset, getValues, setValue, setError,
@@ -52,6 +52,11 @@ export function TermFormDialog({
   const valueType = useWatch({ control, name: "valueType" });
   const period = useWatch({ control, name: "period" });
   const isPercent = valueType === "percent";
+  // An ambassador's obligation (reel, post…) carries its own reward and bonuses,
+  // so it doesn't need a separate "we pay" term.
+  const isObligation = subjectType === "ambassador" && direction === "they_give";
+  const tiers = useFieldArray({ control, name: "bonusTiers" });
+  const bonusMetric = useWatch({ control, name: "bonusMetric" });
 
   async function onSubmit(values: PartnershipTermInput) {
     // Keep only the value fields that match the chosen kind of reward.
@@ -59,9 +64,12 @@ export function TermFormDialog({
       setError("percent", { message: "Zadejte procento" });
       return;
     }
-    const data: PartnershipTermInput = isPercent
-      ? { ...values, amount: null, quantity: null }
-      : { ...values, percent: null, percentBase: null, productIds: [], ...(values.period === "per_event" && { quantity: null }) };
+    const noReward = { rewardAmount: null, bonusMetric: null, bonusTiers: [] };
+    const data: PartnershipTermInput = isObligation
+      ? { ...values, valueType: "fixed", amount: null, percent: null, percentBase: null, productIds: [] }
+      : isPercent
+        ? { ...values, ...noReward, amount: null, quantity: null }
+        : { ...values, ...noReward, percent: null, percentBase: null, productIds: [], ...(values.period === "per_event" && { quantity: null }) };
     try {
       if (isEdit) {
         await updatePartnershipTerm(term!.id, data);
@@ -111,6 +119,12 @@ export function TermFormDialog({
             <Field label="Název *" error={errors.title?.message} className="sm:col-span-2">
               <Input placeholder={direction === "we_give" ? "např. Měsíční odměna" : "např. 4 příspěvky na Instagramu"} {...register("title")} />
             </Field>
+            {isObligation ? (
+              <Field label="Kolikrát (za období)">
+                <Input type="number" min={0} placeholder="např. 1" {...register("quantity")} />
+              </Field>
+            ) : (
+              <>
             <Field label="Hodnota" className="sm:col-span-2">
               <Controller control={control} name="valueType" render={({ field }) => (
                 <div className="grid grid-cols-2 gap-1 rounded-lg border p-1">
@@ -182,6 +196,8 @@ export function TermFormDialog({
                 )}
               </>
             )}
+              </>
+            )}
             <Field label="Termín splnění">
               <Input type="date" {...register("dueDate")} />
             </Field>
@@ -193,6 +209,36 @@ export function TermFormDialog({
               <Textarea rows={3} placeholder="Přesné znění, hashtagy, označení @next8, kdy se vyplácí…" {...register("description")} />
             </Field>
           </Section>
+
+          {isObligation && (
+            <Section title="Odměna za splnění">
+              <Field label="Za každé splnění platíme">
+                <Controller control={control} name="rewardAmount" render={({ field }) => (
+                  <FormCurrencyInput value={field.value as number | null | undefined} onChange={field.onChange} placeholder="např. 1 500" />
+                )} />
+              </Field>
+              <Field label="Bonus se počítá podle">
+                <Input placeholder="zhlédnutí" {...register("bonusMetric")} />
+              </Field>
+              <div className="sm:col-span-2 space-y-2">
+                {tiers.fields.map((tier, i) => (
+                  <div key={tier.id} className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground shrink-0">Od</span>
+                    <Input type="number" min={1} className="w-32" placeholder="20000" {...register(`bonusTiers.${i}.threshold` as const)} />
+                    <span className="text-muted-foreground shrink-0">{bonusMetric || "zhlédnutí"} bonus +</span>
+                    <Controller control={control} name={`bonusTiers.${i}.amount` as const} render={({ field }) => (
+                      <div className="w-36"><FormCurrencyInput value={field.value} onChange={field.onChange} placeholder="500" /></div>
+                    )} />
+                    <Button type="button" variant="ghost" size="icon-sm" onClick={() => tiers.remove(i)}><X className="h-3.5 w-3.5" /></Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => tiers.append({ threshold: "" as unknown as number, amount: null as unknown as number })}>
+                  <Plus className="h-3.5 w-3.5" /> Přidat bonus
+                </Button>
+                {tiers.fields.length > 1 && <p className="text-xs text-muted-foreground">Vyplácí se nejvyšší dosažený bonus.</p>}
+              </div>
+            </Section>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Ukládám…" : isEdit ? "Uložit změny" : "Přidat podmínku"}</Button>
           </DialogFooter>

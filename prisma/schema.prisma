@@ -996,25 +996,30 @@ model Partner {
 }
 
 model PartnershipTerm {
-  id          String    @id @default(cuid())
-  tenantId    String
-  subjectType String // ambassador | partner
-  subjectId   String
-  direction   String // we_give (NEXT8 → them) | they_give (them → NEXT8)
-  type        String // fee | bonus | products | … | posts | event | logo …
-  title       String
-  description String?
-  valueType   String    @default("fixed") // fixed (amount in Kč) | percent (share of a sale)
-  amount      Float? // money value per period (fixed)
-  percent     Float? // e.g. 15 = 15 % (percent)
-  percentBase String? // what the percentage is taken from, e.g. "předplatné aplikace"
-  productIds  String[]  @default([]) // catalog products the commission applies to (empty = any)
-  quantity    Int? // deliverable count per period (e.g. 4 posts)
-  period      String    @default("one_off") // one_off | monthly | quarterly | season | yearly | per_event
-  dueDate     DateTime?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  tenantId     String
+  subjectType  String // ambassador | partner
+  subjectId    String
+  direction    String // we_give (NEXT8 → them) | they_give (them → NEXT8)
+  type         String // fee | bonus | products | … | posts | event | logo …
+  title        String
+  description  String?
+  valueType    String    @default("fixed") // fixed (amount in Kč) | percent (share of a sale)
+  amount       Float? // money value per period (fixed)
+  percent      Float? // e.g. 15 = 15 % (percent)
+  percentBase  String? // what the percentage is taken from, e.g. "předplatné aplikace"
+  productIds   String[]  @default([]) // catalog products the commission applies to (empty = any)
+  // Ambassador obligations: what we pay per delivered piece, plus performance bonuses,
+  // e.g. rewardAmount 1500 + bonusTiers [{ threshold: 20000, amount: 500 }] "zhlédnutí".
+  rewardAmount Float?
+  bonusMetric  String?
+  bonusTiers   Json?
+  quantity     Int? // deliverable count per period (e.g. 4 posts)
+  period       String    @default("one_off") // one_off | monthly | quarterly | season | yearly | per_event
+  dueDate      DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fulfillments PartnershipFulfillment[]
@@ -1025,18 +1030,21 @@ model PartnershipTerm {
 // One logged delivery against a term: a payout we made, products shipped, a post
 // they published (with link), an event they attended…
 model PartnershipFulfillment {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   tenantId     String
   termId       String
   date         DateTime
-  quantity     Int      @default(1)
+  quantity     Int       @default(1)
   productId    String? // catalog product that was sold (commission terms)
   baseAmount   Float? // sale value a percentage term was computed from
+  metricValue  Int? // e.g. views the reel reached — drives bonus tiers
+  rewardAmount Float? // what we owe for this delivery (reward + bonus)
+  paidAt       DateTime? // when the reward was paid out
   amount       Float?
   link         String?
   note         String?
   recordedById String
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   term       PartnershipTerm @relation(fields: [termId], references: [id], onDelete: Cascade)

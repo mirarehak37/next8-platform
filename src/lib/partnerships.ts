@@ -3,7 +3,35 @@ import { formatDate } from "@/lib/format";
 // Pure helpers shared by the Ambassadors and Partners modules (server pages and
 // client components alike) — period windows, progress and cost roll-ups.
 
-export type FulfillmentLike = { date: Date | string; quantity: number; amount: number | null };
+export type FulfillmentLike = { date: Date | string; quantity: number; amount: number | null; rewardAmount?: number | null };
+
+export type BonusTier = { threshold: number; amount: number };
+
+// Tiers are stored as JSON; tolerate anything malformed and keep them ascending.
+export function parseBonusTiers(value: unknown): BonusTier[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((t) => ({ threshold: Number(t?.threshold), amount: Number(t?.amount) }))
+    .filter((t) => Number.isFinite(t.threshold) && t.threshold > 0 && Number.isFinite(t.amount))
+    .sort((a, b) => a.threshold - b.threshold);
+}
+
+// What we owe for one logged delivery of an obligation: the per-piece reward plus
+// the highest bonus tier the achieved metric (e.g. views) has reached.
+export function deliveryReward(
+  term: { rewardAmount?: number | null; bonusTiers?: unknown },
+  quantity: number,
+  metricValue: number | null | undefined,
+) {
+  const base = (term.rewardAmount ?? 0) * (quantity || 1);
+  const reached = parseBonusTiers(term.bonusTiers).filter((t) => metricValue != null && metricValue >= t.threshold);
+  const bonus = reached.length ? reached[reached.length - 1].amount : 0;
+  return { base, bonus, total: base + bonus };
+}
+
+export function hasDeliveryReward(term: { rewardAmount?: number | null; bonusTiers?: unknown }) {
+  return !!term.rewardAmount || parseBonusTiers(term.bonusTiers).length > 0;
+}
 
 export type TermLike = {
   direction: string;
@@ -90,14 +118,31 @@ export function termProgress(term: TermLike, fulfillments: FulfillmentLike[], no
 
 // Rough yearly value of a set of terms in one direction: fixed terms extrapolated
 // from their period (one-off counted once), variable terms from the last 12 months
-// of logged fulfilments (only when the terms carry them).
+// of logged fulfilments (only when the terms carry them). Our side also includes the
+// rewards owed for delivered obligations (reels, posts…) over the last 12 months.
 export function yearlyValue(terms: TermLike[], direction: "we_give" | "they_give") {
-  return terms
+  const own = terms
     .filter((t) => t.isActive && t.direction === direction)
     .reduce((s, t) => {
       if (isVariableTerm(t)) return s + (t.fulfillments ? trailingYear(t.fulfillments).amount : 0);
       return s + (t.amount ?? 0) * (YEARLY_MULTIPLIER[t.period] ?? 1);
     }, 0);
+  if (direction !== "we_give") return own;
+  const from = oneYearAgo();
+  const rewards = terms
+    .filter((t) => t.direction === "they_give")
+    .flatMap((t) => t.fulfillments ?? [])
+    .filter((f) => new Date(f.date) >= from)
+    .reduce((s, f) => s + (f.rewardAmount ?? 0), 0);
+  return own + rewards;
+}
+
+// Rewards for delivered obligations that haven't been paid out yet.
+export function unpaidRewards(terms: { fulfillments: { rewardAmount: number | null; paidAt: string | Date | null }[] }[]) {
+  return terms
+    .flatMap((t) => t.fulfillments)
+    .filter((f) => f.rewardAmount && !f.paidAt)
+    .reduce((s, f) => s + (f.rewardAmount ?? 0), 0);
 }
 
 // "15 % z předplatného" / "5 000 Kč / měs." style label for a term's value.

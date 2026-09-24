@@ -15,7 +15,7 @@ import { TermsPanel } from "@/components/partnerships/terms-panel";
 import { AttachmentsPanel } from "@/components/partnerships/attachments-panel";
 import { AuditHistory, FulfillmentLedger, InfoItem } from "@/components/partnerships/detail-parts";
 import { loadPartnershipExtras } from "@/lib/partnership-queries";
-import { contractRangeLabel, contractState, socialUrl, toDateInput, yearlyValue } from "@/lib/partnerships";
+import { contractRangeLabel, contractState, socialUrl, toDateInput, unpaidRewards, yearlyValue } from "@/lib/partnerships";
 import { AMBASSADOR_BILLING_TYPES, AMBASSADOR_TIERS, PARTNERSHIP_STATUSES, findMeta } from "@/lib/constants";
 import { formatCurrency, formatDate, initials } from "@/lib/format";
 import { Building2, Mail, Phone, AtSign, Users } from "lucide-react";
@@ -45,6 +45,7 @@ export default async function AmbassadorDetailPage({ params }: { params: Promise
   const tierMeta = findMeta(AMBASSADOR_TIERS, ambassador.tier);
   const contract = contractState(ambassador.contractEnd);
   const yearlyCost = yearlyValue(terms, "we_give");
+  const toPay = unpaidRewards(terms);
   const socials = (["instagram", "tiktok", "youtube"] as const)
     .map((network) => ({ network, value: ambassador[network], url: socialUrl(network, ambassador[network]) }))
     .filter((s) => s.value);
@@ -149,6 +150,7 @@ export default async function AmbassadorDetailPage({ params }: { params: Promise
               <div className="pt-2 border-t space-y-1">
                 <div className="text-xs text-muted-foreground">Náklady za rok (odhad)</div>
                 <div className="text-lg font-semibold">{formatCurrency(yearlyCost)}</div>
+                {toPay > 0 && <div className="text-xs font-medium text-[#FF1947]">K výplatě: {formatCurrency(toPay)}</div>}
                 <div className="text-xs text-muted-foreground">
                   Smlouva: {contractRangeLabel(ambassador.contractStart, ambassador.contractEnd)}
                 </div>

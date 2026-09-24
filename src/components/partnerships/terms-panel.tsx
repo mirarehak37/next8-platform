@@ -8,20 +8,24 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { TermFormDialog } from "@/components/partnerships/term-form-dialog";
 import { FulfillmentFormDialog } from "@/components/partnerships/fulfillment-form-dialog";
-import { deletePartnershipFulfillment, deletePartnershipTerm } from "@/lib/actions/partnership-terms";
-import { isVariableTerm, termProgress, termValueLabel, trailingYear, yearlyValue } from "@/lib/partnerships";
+import { deletePartnershipFulfillment, deletePartnershipTerm, updatePartnershipFulfillment } from "@/lib/actions/partnership-terms";
+import { hasDeliveryReward, isVariableTerm, termProgress, termValueLabel, trailingYear, yearlyValue, type BonusTier } from "@/lib/partnerships";
 import { findMeta, TERM_PERIODS, termTypes } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { ProductOption } from "@/lib/partnership-queries";
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, ExternalLink, Pencil, Trash2, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, ExternalLink, Eye, Pencil, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type FulfillmentView = {
   id: string;
   date: string;
   quantity: number;
+  productId: string | null;
   productName: string | null;
   baseAmount: number | null;
+  metricValue: number | null;
+  rewardAmount: number | null;
+  paidAt: string | null;
   amount: number | null;
   link: string | null;
   note: string | null;
@@ -39,6 +43,9 @@ export type TermView = {
   percent: number | null;
   percentBase: string | null;
   productIds: string[];
+  rewardAmount: number | null;
+  bonusMetric: string | null;
+  bonusTiers: BonusTier[];
   quantity: number | null;
   period: string;
   dueDate: string | null;
@@ -133,6 +140,16 @@ function TermCard({
     }
   }
 
+  async function togglePaid(id: string, paid: boolean) {
+    try {
+      await updatePartnershipFulfillment(id, { paid });
+      toast.success(paid ? "Odměna označena jako vyplacená." : "Označení vyplaceno zrušeno.");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Něco se pokazilo.");
+    }
+  }
+
   async function handleDeleteFulfillment(id: string) {
     if (!confirm("Smazat tento záznam plnění?")) return;
     try {
@@ -148,6 +165,10 @@ function TermCard({
   const variable = isVariableTerm(term);
   const lastYear = variable ? trailingYear(term.fulfillments) : null;
   const termProducts = products.filter((p) => term.productIds.includes(p.id));
+  const rewarded = term.direction === "they_give" && hasDeliveryReward(term);
+  const metric = term.bonusMetric || "zhlédnutí";
+  const unpaid = term.fulfillments.filter((f) => f.rewardAmount && !f.paidAt).reduce((sum, f) => sum + (f.rewardAmount ?? 0), 0);
+  const numberFormat = new Intl.NumberFormat("cs-CZ");
 
   return (
     <Card className={cn(!term.isActive && "opacity-60")}>
@@ -166,6 +187,17 @@ function TermCard({
               {!valueLabel && !(term.quantity && !variable) && period && <span>{period.label}</span>}
               {term.dueDate && <span>Termín: {formatDate(term.dueDate)}</span>}
             </div>
+            {rewarded && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">Odměna: </span>
+                <span className="font-medium">
+                  {term.rewardAmount ? `${formatCurrency(term.rewardAmount)} za každé splnění` : "jen bonus"}
+                </span>
+                {term.bonusTiers.map((t) => (
+                  <span key={t.threshold} className="text-muted-foreground"> · od {numberFormat.format(t.threshold)} {metric} +{formatCurrency(t.amount)}</span>
+                ))}
+              </div>
+            )}
             {termProducts.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {termProducts.map((p) => <StatusBadge key={p.id} label={p.name} color="indigo" />)}
@@ -184,6 +216,7 @@ function TermCard({
                   id: term.id, subjectType, subjectId, direction: term.direction, type: term.type, title: term.title,
                   description: term.description, valueType: term.valueType as "fixed" | "percent", amount: term.amount,
                   percent: term.percent, percentBase: term.percentBase, productIds: term.productIds, quantity: term.quantity, period: term.period,
+                  rewardAmount: term.rewardAmount, bonusMetric: term.bonusMetric, bonusTiers: term.bonusTiers,
                   dueDate: term.dueDate?.slice(0, 10) ?? null, isActive: term.isActive,
                 }}
                 trigger={<Button variant="ghost" size="icon-sm"><Pencil className="h-3.5 w-3.5" /></Button>}
@@ -199,6 +232,13 @@ function TermCard({
             <span className="font-medium">
               {lastYear.count}× · {formatCurrency(lastYear.amount)}
             </span>
+          </div>
+        )}
+
+        {rewarded && unpaid > 0 && (
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">K výplatě (nevyplaceno)</span>
+            <span className="font-semibold text-[#FF1947]">{formatCurrency(unpaid)}</span>
           </div>
         )}
 
@@ -237,6 +277,23 @@ function TermCard({
                 {f.productName ? <span className="shrink-0">{f.productName}</span> : null}
                 {f.baseAmount ? <span className="shrink-0 text-muted-foreground">z {formatCurrency(f.baseAmount)}</span> : null}
                 {f.amount ? <span className="shrink-0 font-medium">{formatCurrency(f.amount)}</span> : null}
+                {f.metricValue != null && (
+                  <span className="shrink-0 flex items-center gap-0.5 text-muted-foreground"><Eye className="h-3 w-3" />{numberFormat.format(f.metricValue)}</span>
+                )}
+                {f.rewardAmount ? (
+                  canEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => togglePaid(f.id, !f.paidAt)}
+                      title={f.paidAt ? "Vyplaceno — kliknutím zrušíte" : "Kliknutím označíte jako vyplacené"}
+                      className="shrink-0"
+                    >
+                      <StatusBadge label={`${formatCurrency(f.rewardAmount)} · ${f.paidAt ? "vyplaceno" : "k výplatě"}`} color={f.paidAt ? "emerald" : "amber"} />
+                    </button>
+                  ) : (
+                    <StatusBadge label={`${formatCurrency(f.rewardAmount)} · ${f.paidAt ? "vyplaceno" : "k výplatě"}`} color={f.paidAt ? "emerald" : "amber"} className="shrink-0" />
+                  )
+                ) : null}
                 <span className="truncate text-muted-foreground">{f.note}</span>
                 {f.link && (
                   <a href={f.link} target="_blank" rel="noopener noreferrer" className="shrink-0 text-muted-foreground hover:text-foreground">
@@ -244,6 +301,14 @@ function TermCard({
                   </a>
                 )}
                 <span className="ml-auto shrink-0 text-muted-foreground">{f.recordedBy}</span>
+                {canEdit && (
+                  <FulfillmentFormDialog
+                    term={term}
+                    products={termProducts.length ? termProducts : products}
+                    fulfillment={f}
+                    trigger={<button type="button" className="shrink-0 text-muted-foreground hover:text-foreground"><Pencil className="h-3 w-3" /></button>}
+                  />
+                )}
                 {canEdit && (
                   <button type="button" onClick={() => handleDeleteFulfillment(f.id)} className="shrink-0 text-muted-foreground hover:text-destructive">
                     <X className="h-3 w-3" />

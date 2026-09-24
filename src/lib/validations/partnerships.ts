@@ -62,6 +62,11 @@ export const partnershipTermSchema = z.object({
   percent: z.preprocess((v) => (v === "" || v === null || v === undefined || Number.isNaN(v) ? null : v), z.coerce.number().min(0).max(100, "Max. 100 %").nullable().optional()),
   percentBase: z.string().optional().nullable(),
   productIds: z.array(z.string()).default([]),
+  rewardAmount: optionalNumber,
+  bonusMetric: z.string().optional().nullable(),
+  bonusTiers: z
+    .array(z.object({ threshold: z.coerce.number().int().positive("Zadejte hranici"), amount: z.coerce.number().min(0) }))
+    .default([]),
   quantity: optionalInt,
   period: z.string().default("one_off"),
   dueDate: z.string().optional().nullable(),
@@ -75,8 +80,14 @@ export const partnershipFulfillmentSchema = z.object({
   quantity: z.coerce.number().int().min(1).default(1),
   productId: z.string().optional().nullable(),
   baseAmount: optionalNumber,
+  metricValue: optionalInt,
+  rewardAmount: optionalNumber,
   amount: optionalNumber,
   link: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
 });
 export type PartnershipFulfillmentInput = z.input<typeof partnershipFulfillmentSchema>;
+
+export const partnershipFulfillmentUpdateSchema = partnershipFulfillmentSchema.omit({ termId: true }).partial().extend({
+  paid: z.boolean().optional(),
+});

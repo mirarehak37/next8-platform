@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parseBonusTiers } from "@/lib/partnerships";
 import type { TermView } from "@/components/partnerships/terms-panel";
 import type { AttachmentView } from "@/components/partnerships/attachments-panel";
 
@@ -36,6 +37,9 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
     percent: t.percent,
     percentBase: t.percentBase,
     productIds: t.productIds,
+    rewardAmount: t.rewardAmount,
+    bonusMetric: t.bonusMetric,
+    bonusTiers: parseBonusTiers(t.bonusTiers),
     quantity: t.quantity,
     period: t.period,
     dueDate: t.dueDate?.toISOString() ?? null,
@@ -44,8 +48,12 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
       id: f.id,
       date: f.date.toISOString(),
       quantity: f.quantity,
+      productId: f.productId,
       productName: f.product?.name ?? null,
       baseAmount: f.baseAmount,
+      metricValue: f.metricValue,
+      rewardAmount: f.rewardAmount,
+      paidAt: f.paidAt?.toISOString() ?? null,
       amount: f.amount,
       link: f.link,
       note: f.note,

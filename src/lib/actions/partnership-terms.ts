@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePermission, logAudit, ActionError } from "@/lib/actions/helpers";
-import { partnershipTermSchema, partnershipFulfillmentSchema } from "@/lib/validations/partnerships";
+import { partnershipTermSchema, partnershipFulfillmentSchema, partnershipFulfillmentUpdateSchema } from "@/lib/validations/partnerships";
 import { revalidatePath } from "next/cache";
 
 type SubjectType = "ambassador" | "partner";
@@ -85,6 +85,30 @@ export async function createPartnershipFulfillment(data: unknown) {
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: term.subjectType, entityId: term.subjectId, action: "fulfillment_create", changes: { term: term.title } });
   revalidateSubject(term.subjectType, term.subjectId);
   return fulfillment;
+}
+
+// Views often come in days after a reel is posted, and payouts happen later still —
+// so a logged delivery stays editable (metric, reward) and can be marked paid.
+export async function updatePartnershipFulfillment(id: string, data: unknown) {
+  const fulfillment = await prisma.partnershipFulfillment.findUnique({ where: { id } });
+  if (!fulfillment) throw new ActionError("Záznam nenalezen.");
+  const { term, user } = await requireTerm(fulfillment.termId);
+  const { paid, date, productId, ...rest } = partnershipFulfillmentUpdateSchema.parse(data);
+  if (productId) await assertProducts(user.tenantId, [productId]);
+  await prisma.partnershipFulfillment.update({
+    where: { id },
+    data: {
+      ...rest,
+      ...(date !== undefined && { date: new Date(date) }),
+      ...(productId !== undefined && { productId: productId || null }),
+      ...(paid !== undefined && { paidAt: paid ? fulfillment.paidAt ?? new Date() : null }),
+    },
+  });
+  await logAudit({
+    tenantId: user.tenantId, userId: user.id, entityType: term.subjectType, entityId: term.subjectId,
+    action: paid !== undefined ? (paid ? "fulfillment_paid" : "fulfillment_unpaid") : "fulfillment_update", changes: { term: term.title },
+  });
+  revalidateSubject(term.subjectType, term.subjectId);
 }
 
 export async function deletePartnershipFulfillment(id: string) {
