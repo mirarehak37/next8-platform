@@ -3,19 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_GROUPS } from "@/lib/nav-config";
+import { NAV_GROUPS, isNavActive } from "@/lib/nav-config";
 import { can, type ModuleResource } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Building2, Users, UserPlus, Handshake, Activity, Package, FileText,
   CheckSquare, Calendar, BarChart3, UserCog, ShieldCheck, UsersRound, LayoutGrid,
-  SlidersHorizontal, Workflow, History, LockKeyhole, Map, Upload, Star, HeartHandshake, type LucideIcon,
+  SlidersHorizontal, Workflow, History, LockKeyhole, Map, Upload, Star, HeartHandshake, Clapperboard, Tent, type LucideIcon,
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, Building2, Users, UserPlus, Handshake, Activity, Package, FileText,
   CheckSquare, Calendar, BarChart3, UserCog, ShieldCheck, UsersRound, LayoutGrid,
-  SlidersHorizontal, Workflow, History, Map, Upload, Star, HeartHandshake,
+  SlidersHorizontal, Workflow, History, Map, Upload, Star, HeartHandshake, Clapperboard, Tent,
 };
 
 export function Sidebar({
@@ -51,7 +51,7 @@ export function Sidebar({
               <div className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const Icon = ICONS[item.icon];
-                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                  const active = isNavActive(pathname, item.href);
                   return (
                     <Link
                       key={item.href}

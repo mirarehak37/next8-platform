@@ -11,6 +11,10 @@ const ACTION_LABELS: Record<string, string> = {
   term_update: "upravil(a) podmínku",
   term_delete: "smazal(a) podmínku",
   fulfillment_create: "zapsal(a) plnění",
+  fulfillment_update: "upravil(a) plnění",
+  fulfillment_plan: "naplánoval(a) obsah",
+  fulfillment_paid: "označil(a) odměnu jako vyplacenou",
+  fulfillment_unpaid: "zrušil(a) označení vyplaceno",
   attachment_create: "nahrál(a) dokument",
   attachment_delete: "smazal(a) dokument",
 };
@@ -52,9 +56,10 @@ export function FulfillmentLedger({ terms, weGiveLabel, theyGiveLabel }: { terms
     .flatMap((t) => t.fulfillments.map((f) => ({ ...f, termTitle: t.title, direction: t.direction })))
     .sort((a, b) => b.date.localeCompare(a.date));
   const year = new Date().getFullYear();
-  const paidThisYear = rows
-    .filter((r) => r.direction === "we_give" && new Date(r.date).getFullYear() === year)
-    .reduce((s, r) => s + (r.amount ?? 0), 0);
+  const paidThisYear =
+    rows.filter((r) => r.direction === "we_give" && new Date(r.date).getFullYear() === year).reduce((s, r) => s + (r.amount ?? 0), 0) +
+    rows.filter((r) => r.rewardAmount && r.paidAt && new Date(r.paidAt).getFullYear() === year).reduce((s, r) => s + (r.rewardAmount ?? 0), 0);
+  const unpaid = rows.filter((r) => r.rewardAmount && !r.paidAt).reduce((s, r) => s + (r.rewardAmount ?? 0), 0);
   const receivedThisYear = rows
     .filter((r) => r.direction === "they_give" && new Date(r.date).getFullYear() === year)
     .reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -67,6 +72,9 @@ export function FulfillmentLedger({ terms, weGiveLabel, theyGiveLabel }: { terms
     <div className="space-y-3">
       <div className="flex flex-wrap gap-6 text-sm">
         <div><span className="text-muted-foreground">{weGiveLabel} v roce {year}: </span><span className="font-semibold">{formatCurrency(paidThisYear)}</span></div>
+        {unpaid > 0 && (
+          <div><span className="text-muted-foreground">K výplatě: </span><span className="font-semibold text-[#FF1947]">{formatCurrency(unpaid)}</span></div>
+        )}
         {receivedThisYear > 0 && (
           <div><span className="text-muted-foreground">{theyGiveLabel} v roce {year}: </span><span className="font-semibold">{formatCurrency(receivedThisYear)}</span></div>
         )}
@@ -94,8 +102,14 @@ export function FulfillmentLedger({ terms, weGiveLabel, theyGiveLabel }: { terms
                     <td className="px-4 py-2 whitespace-nowrap text-muted-foreground">{r.direction === "we_give" ? "NEXT8 →" : "→ NEXT8"}</td>
                     <td className="px-4 py-2 text-right">{r.quantity}</td>
                     <td className="px-4 py-2 text-right whitespace-nowrap">
-                      {r.amount ? formatCurrency(r.amount) : "—"}
+                      {r.amount ? formatCurrency(r.amount) : r.rewardAmount ? null : "—"}
                       {r.baseAmount ? <div className="text-xs text-muted-foreground">z prodeje {formatCurrency(r.baseAmount)}</div> : null}
+                      {r.rewardAmount ? (
+                        <div className={r.paidAt ? "text-xs text-emerald-600" : "text-xs text-[#FF1947]"}>
+                          odměna {formatCurrency(r.rewardAmount)} · {r.paidAt ? `vyplaceno ${formatDate(r.paidAt)}` : "k výplatě"}
+                        </div>
+                      ) : null}
+                      {r.metricValue != null ? <div className="text-xs text-muted-foreground">{new Intl.NumberFormat("cs-CZ").format(r.metricValue)} zhlédnutí</div> : null}
                     </td>
                     <td className="px-4 py-2 text-muted-foreground">
                       {r.link ? <a href={r.link} target="_blank" rel="noopener noreferrer" className="underline">{r.note || "odkaz"}</a> : r.note ?? "—"}

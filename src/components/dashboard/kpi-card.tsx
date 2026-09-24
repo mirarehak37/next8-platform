@@ -20,7 +20,7 @@ export function KpiCard({
       <CardContent className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs text-muted-foreground font-medium">{label}</div>
-          <div className="text-2xl font-semibold tracking-tight mt-1 truncate">{value}</div>
+          <div className="text-xl sm:text-2xl font-semibold tracking-tight mt-1 truncate">{value}</div>
           {hint && <div className="text-xs text-muted-foreground mt-1">{hint}</div>}
           {trend !== undefined && (
             <div className={cn("flex items-center gap-1 text-xs mt-1.5 font-medium", trend >= 0 ? "text-emerald-600" : "text-rose-600")}>

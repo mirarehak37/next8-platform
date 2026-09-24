@@ -54,6 +54,9 @@ model Tenant {
   partners     Partner[]
   terms        PartnershipTerm[]
   fulfillments PartnershipFulfillment[]
+
+  events             Event[]
+  eventRegistrations EventRegistration[]
 }
 
 model User {
@@ -93,6 +96,7 @@ model User {
   ownedAmbassadors     Ambassador[]             @relation("AmbassadorOwner")
   ownedPartners        Partner[]                @relation("PartnerOwner")
   recordedFulfillments PartnershipFulfillment[] @relation("FulfillmentRecorder")
+  ownedEvents          Event[]                  @relation("EventOwner")
 
   comments      Comment[]
   attachments   Attachment[]
@@ -532,8 +536,10 @@ model Company {
   quotes    Quote[]
   clubTeams ClubTeam[]
 
-  ambassadors Ambassador[]
-  sponsors    Partner[]
+  ambassadors        Ambassador[]
+  sponsors           Partner[]
+  hostedEvents       Event[]
+  eventRegistrations EventRegistration[]
 
   @@index([tenantId, status])
   @@index([tenantId, name])
@@ -615,6 +621,7 @@ model Contact {
 
   ambassadorProfiles Ambassador[]
   partnerContacts    Partner[]
+  eventRegistrations EventRegistration[]
 
   @@index([tenantId, lastName])
 }
@@ -957,6 +964,8 @@ model Ambassador {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  eventRegistrations EventRegistration[]
+
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   owner   User     @relation("AmbassadorOwner", fields: [ownerId], references: [id])
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -996,25 +1005,30 @@ model Partner {
 }
 
 model PartnershipTerm {
-  id          String    @id @default(cuid())
-  tenantId    String
-  subjectType String // ambassador | partner
-  subjectId   String
-  direction   String // we_give (NEXT8 → them) | they_give (them → NEXT8)
-  type        String // fee | bonus | products | … | posts | event | logo …
-  title       String
-  description String?
-  valueType   String    @default("fixed") // fixed (amount in Kč) | percent (share of a sale)
-  amount      Float? // money value per period (fixed)
-  percent     Float? // e.g. 15 = 15 % (percent)
-  percentBase String? // what the percentage is taken from, e.g. "předplatné aplikace"
-  productIds  String[]  @default([]) // catalog products the commission applies to (empty = any)
-  quantity    Int? // deliverable count per period (e.g. 4 posts)
-  period      String    @default("one_off") // one_off | monthly | quarterly | season | yearly | per_event
-  dueDate     DateTime?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  tenantId     String
+  subjectType  String // ambassador | partner
+  subjectId    String
+  direction    String // we_give (NEXT8 → them) | they_give (them → NEXT8)
+  type         String // fee | bonus | products | … | posts | event | logo …
+  title        String
+  description  String?
+  valueType    String    @default("fixed") // fixed (amount in Kč) | percent (share of a sale)
+  amount       Float? // money value per period (fixed)
+  percent      Float? // e.g. 15 = 15 % (percent)
+  percentBase  String? // what the percentage is taken from, e.g. "předplatné aplikace"
+  productIds   String[]  @default([]) // catalog products the commission applies to (empty = any)
+  // Ambassador obligations: what we pay per delivered piece, plus performance bonuses,
+  // e.g. rewardAmount 1500 + bonusTiers [{ threshold: 20000, amount: 500 }] "zhlédnutí".
+  rewardAmount Float?
+  bonusMetric  String?
+  bonusTiers   Json?
+  quantity     Int? // deliverable count per period (e.g. 4 posts)
+  period       String    @default("one_off") // one_off | monthly | quarterly | season | yearly | per_event
+  dueDate      DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   fulfillments PartnershipFulfillment[]
@@ -1025,18 +1039,22 @@ model PartnershipTerm {
 // One logged delivery against a term: a payout we made, products shipped, a post
 // they published (with link), an event they attended…
 model PartnershipFulfillment {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   tenantId     String
   termId       String
   date         DateTime
-  quantity     Int      @default(1)
+  quantity     Int       @default(1)
   productId    String? // catalog product that was sold (commission terms)
   baseAmount   Float? // sale value a percentage term was computed from
+  metricValue  Int? // e.g. views the reel reached — drives bonus tiers
+  rewardAmount Float? // what we owe for this delivery (reward + bonus)
+  paidAt       DateTime? // when the reward was paid out
+  status       String    @default("done") // planned (content calendar) | done
   amount       Float?
   link         String?
   note         String?
   recordedById String
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   term       PartnershipTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
@@ -1044,4 +1062,62 @@ model PartnershipFulfillment {
   recordedBy User            @relation("FulfillmentRecorder", fields: [recordedById], references: [id])
 
   @@index([tenantId, termId, date])
+  @@index([tenantId, status, date])
+}
+
+// =========================================================================
+// EVENTS — camps, performance testing, coach workshops. Registrations can be a
+// CRM contact, a free-text participant (e.g. a kid signed up by a parent) or an
+// ambassador invited as a guest.
+// =========================================================================
+
+model Event {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  type        String    @default("camp") // camp | testing | workshop | other
+  status      String    @default("planned") // planned | open | full | done | cancelled
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  capacity    Int?
+  price       Float? // per participant, CZK
+  companyId   String? // host / partner club
+  ownerId     String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner         User                @relation("EventOwner", fields: [ownerId], references: [id])
+  company       Company?            @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  registrations EventRegistration[]
+
+  @@index([tenantId, startDate])
+}
+
+model EventRegistration {
+  id            String   @id @default(cuid())
+  tenantId      String
+  eventId       String
+  role          String   @default("participant") // participant | coach | guest
+  contactId     String?
+  ambassadorId  String?
+  name          String // display name (copied from contact/ambassador or typed in)
+  email         String?
+  phone         String?
+  companyId     String? // participant's club
+  status        String   @default("registered") // registered | confirmed | attended | no_show | cancelled
+  paymentStatus String   @default("unpaid") // unpaid | paid | free
+  amount        Float?
+  note          String?
+  createdAt     DateTime @default(now())
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contact    Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  ambassador Ambassador? @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+  company    Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, eventId])
 }

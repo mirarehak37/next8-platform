@@ -23,12 +23,14 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
+  // max-w-full + overflow-x-auto: on phones a long row of tabs scrolls sideways
+  // instead of pushing the whole page wider than the screen.
+  "group/tabs-list inline-flex w-fit max-w-full items-center justify-start overflow-x-auto rounded-lg p-[3px] text-muted-foreground [scrollbar-width:none] group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
   {
     variants: {
       variant: {
         default: "bg-muted",
-        line: "gap-1 bg-transparent",
+        line: "gap-1 bg-transparent group-data-horizontal/tabs:h-auto group-data-horizontal/tabs:pb-2",
       },
     },
     defaultVariants: {

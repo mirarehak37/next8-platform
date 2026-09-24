@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { NAV_GROUPS } from "@/lib/nav-config";
+import { NAV_GROUPS, isNavActive } from "@/lib/nav-config";
 import { can, type ModuleResource } from "@/lib/rbac";
 
 export function MobileNav({ role }: { role: string }) {
@@ -30,7 +30,7 @@ export function MobileNav({ role }: { role: string }) {
                 {group.label && <div className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">{group.label}</div>}
                 <div className="space-y-0.5">
                   {visibleItems.map((item) => {
-                    const active = pathname === item.href || pathname.startsWith(item.href + "/");
+                    const active = isNavActive(pathname, item.href);
                     return (
                       <Link
                         key={item.href}

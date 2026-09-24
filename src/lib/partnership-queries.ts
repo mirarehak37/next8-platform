@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parseBonusTiers } from "@/lib/partnerships";
 import type { TermView } from "@/components/partnerships/terms-panel";
 import type { AttachmentView } from "@/components/partnerships/attachments-panel";
 
@@ -36,16 +37,29 @@ export async function loadPartnershipExtras(tenantId: string, subjectType: "amba
     percent: t.percent,
     percentBase: t.percentBase,
     productIds: t.productIds,
+    rewardAmount: t.rewardAmount,
+    bonusMetric: t.bonusMetric,
+    bonusTiers: parseBonusTiers(t.bonusTiers),
     quantity: t.quantity,
     period: t.period,
     dueDate: t.dueDate?.toISOString() ?? null,
     isActive: t.isActive,
-    fulfillments: t.fulfillments.map((f) => ({
+    // Planned entries (content calendar) aren't deliveries yet — keep them apart so
+    // progress, rewards and the ledger only ever count what really happened.
+    planned: t.fulfillments
+      .filter((f) => f.status === "planned")
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .map((f) => ({ id: f.id, date: f.date.toISOString(), note: f.note })),
+    fulfillments: t.fulfillments.filter((f) => f.status !== "planned").map((f) => ({
       id: f.id,
       date: f.date.toISOString(),
       quantity: f.quantity,
+      productId: f.productId,
       productName: f.product?.name ?? null,
       baseAmount: f.baseAmount,
+      metricValue: f.metricValue,
+      rewardAmount: f.rewardAmount,
+      paidAt: f.paidAt?.toISOString() ?? null,
       amount: f.amount,
       link: f.link,
       note: f.note,

@@ -16,6 +16,7 @@ export type ModuleResource =
   | "roadmap"
   | "ambassador"
   | "partner"
+  | "event"
   | "admin";
 
 export type PermissionAction = "view" | "create" | "edit" | "delete" | "export" | "approve" | "admin";
@@ -54,6 +55,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     admin: { actions: ALL_ACTIONS, scope: "all" },
     ambassador: { actions: ALL_ACTIONS, scope: "all" },
     partner: { actions: ALL_ACTIONS, scope: "all" },
+    event: { actions: ALL_ACTIONS, scope: "all" },
   },
   Management: {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -69,6 +71,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     roadmap: { actions: [...EDIT_ACTIONS, "delete", "approve"], scope: "all" },
     ambassador: { actions: EDIT_ACTIONS, scope: "all" },
     partner: { actions: EDIT_ACTIONS, scope: "all" },
+    event: { actions: EDIT_ACTIONS, scope: "all" },
   },
   "Sales Manager": {
     dashboard: { actions: VIEW_ONLY, scope: "team" },
@@ -83,6 +86,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     report: { actions: ["view", "export"], scope: "team" },
     roadmap: { actions: ["view", "create"], scope: "all" },
     partner: { actions: VIEW_ONLY, scope: "all" },
+    event: { actions: EDIT_ACTIONS, scope: "all" },
   },
   Sales: {
     dashboard: { actions: VIEW_ONLY, scope: "own" },
@@ -97,6 +101,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     report: { actions: ["view"], scope: "own" },
     roadmap: { actions: ["view", "create"], scope: "all" },
     partner: { actions: VIEW_ONLY, scope: "all" },
+    event: { actions: EDIT_ACTIONS, scope: "all" },
   },
   Marketing: {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -109,6 +114,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     roadmap: { actions: ["view", "create"], scope: "all" },
     ambassador: { actions: EDIT_ACTIONS, scope: "all" },
     partner: { actions: EDIT_ACTIONS, scope: "all" },
+    event: { actions: EDIT_ACTIONS, scope: "all" },
   },
   Finance: {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -121,6 +127,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     roadmap: { actions: ["view", "create"], scope: "all" },
     ambassador: { actions: ["view", "export"], scope: "all" },
     partner: { actions: ["view", "export"], scope: "all" },
+    event: { actions: EDIT_ACTIONS, scope: "all" },
   },
   Support: {
     dashboard: { actions: VIEW_ONLY, scope: "own" },
@@ -129,6 +136,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     activity: { actions: EDIT_ACTIONS, scope: "own" },
     task: { actions: EDIT_ACTIONS, scope: "own" },
     roadmap: { actions: ["view", "create"], scope: "all" },
+    event: { actions: EDIT_ACTIONS, scope: "all" },
   },
   "Read Only": {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -144,6 +152,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     roadmap: { actions: VIEW_ONLY, scope: "all" },
     ambassador: { actions: VIEW_ONLY, scope: "all" },
     partner: { actions: VIEW_ONLY, scope: "all" },
+    event: { actions: VIEW_ONLY, scope: "all" },
   },
 };
 
