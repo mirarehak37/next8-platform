@@ -12,7 +12,11 @@ export default async function ContactsPage() {
   const [contacts, owners, companies] = await Promise.all([
     prisma.contact.findMany({
       where: scope,
-      include: { owner: { select: { name: true } }, companies: { include: { company: { select: { name: true } } }, take: 1 } },
+      include: {
+        owner: { select: { name: true } },
+        companies: { include: { company: { select: { name: true } } }, take: 1 },
+        clubTeams: { include: { clubTeam: { include: { company: { select: { name: true } } } } } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -23,7 +27,8 @@ export default async function ContactsPage() {
     id: c.id,
     fullName: `${c.firstName} ${c.lastName}`,
     jobTitle: c.jobTitle,
-    companyName: c.companies[0]?.company.name ?? null,
+    companyName: c.companies[0]?.company.name ?? c.clubTeams[0]?.clubTeam.company.name ?? null,
+    teamNames: c.clubTeams.map((ct) => ct.clubTeam.name),
     email: c.email,
     phone: c.phone,
     status: c.status,

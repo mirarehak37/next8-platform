@@ -16,6 +16,7 @@ export type ContactRow = {
   fullName: string;
   jobTitle: string | null;
   companyName: string | null;
+  teamNames: string[];
   email: string | null;
   phone: string | null;
   status: string;
@@ -31,6 +32,11 @@ export function ContactsTable({
   owners: { id: string; name: string }[];
   companies: { id: string; name: string }[];
 }) {
+  const teamOptions = useMemo(
+    () => Array.from(new Set(data.flatMap((d) => d.teamNames))).sort().map((v) => ({ value: v, label: v })),
+    [data],
+  );
+
   const columns = useMemo<ColumnDef<ContactRow, unknown>[]>(
     () => [
       {
@@ -46,6 +52,13 @@ export function ContactsTable({
       },
       { accessorKey: "jobTitle", header: "Pozice", meta: { label: "Pozice" }, cell: ({ row }) => row.original.jobTitle ?? "—" },
       { accessorKey: "companyName", header: "Klub", meta: { label: "Klub" }, cell: ({ row }) => row.original.companyName ?? "—" },
+      {
+        accessorKey: "teamNames",
+        header: "Tým",
+        meta: { label: "Tým" },
+        cell: ({ row }) => (row.original.teamNames.length > 0 ? row.original.teamNames.join(", ") : "—"),
+        filterFn: (row, id, value) => value === "all" || (row.getValue(id) as string[]).includes(value),
+      },
       { accessorKey: "email", header: "E-mail", meta: { label: "E-mail" }, cell: ({ row }) => row.original.email ?? "—" },
       { accessorKey: "phone", header: "Telefon", meta: { label: "Telefon" }, cell: ({ row }) => row.original.phone ?? "—" },
       {
@@ -70,7 +83,10 @@ export function ContactsTable({
       searchPlaceholder="Hledat kontakty podle jména, e-mailu…"
       exportFilename="kontakty"
       emptyMessage="Zatím žádné kontakty."
-      facets={[{ columnId: "status", title: "Stav", options: CONTACT_STATUSES.map((s) => ({ value: s.value, label: s.label })) }]}
+      facets={[
+        { columnId: "status", title: "Stav", options: CONTACT_STATUSES.map((s) => ({ value: s.value, label: s.label })) },
+        { columnId: "teamNames", title: "Tým", options: teamOptions },
+      ]}
       toolbarActions={<ContactFormDialog owners={owners} companies={companies} />}
     />
   );
