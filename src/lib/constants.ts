@@ -202,6 +202,104 @@ export const PRODUCT_UNITS = [
   { value: "GB", label: "GB" },
 ] as const;
 
+// ---------------------------------------------------------------------------
+// Partnerships — ambassadors and partners/sponsors
+// ---------------------------------------------------------------------------
+
+export const PARTNERSHIP_STATUSES = [
+  { value: "candidate", label: "Kandidát", color: "slate" },
+  { value: "negotiation", label: "Vyjednávání", color: "sky" },
+  { value: "active", label: "Aktivní", color: "emerald" },
+  { value: "paused", label: "Pozastaveno", color: "amber" },
+  { value: "ended", label: "Ukončeno", color: "rose" },
+] as const;
+
+export const AMBASSADOR_TIERS = [
+  { value: "top", label: "Top ambasador", color: "indigo" },
+  { value: "standard", label: "Standard", color: "sky" },
+  { value: "micro", label: "Micro influencer", color: "violet" },
+] as const;
+
+export const AMBASSADOR_POSITIONS = ["Útočník", "Obránce", "Brankář", "Trenér", "Influencer", "Jiné"] as const;
+
+export const AMBASSADOR_BILLING_TYPES = [
+  { value: "invoice", label: "Faktura (OSVČ)" },
+  { value: "dpp", label: "DPP" },
+  { value: "barter", label: "Barter (bez peněz)" },
+  { value: "none", label: "Neplaceno" },
+] as const;
+
+export const PARTNER_KINDS = [
+  { value: "next8_partner", label: "Partner NEXT8", color: "indigo" },
+  { value: "club_sponsor", label: "Sponzor klubu", color: "violet" },
+] as const;
+
+export const PARTNER_LEVELS = ["Generální", "Hlavní", "Oficiální", "Technický", "Mediální", "Dodavatel", "Podporovatel"] as const;
+
+// Term vocabularies per module and direction ("we_give" = NEXT8 provides,
+// "they_give" = what the ambassador / partner must deliver in return).
+export const TERM_TYPES = {
+  ambassador: {
+    we_give: [
+      { value: "fee", label: "Pravidelná odměna" },
+      { value: "one_off_fee", label: "Jednorázová odměna" },
+      { value: "bonus", label: "Bonus / provize" },
+      { value: "products", label: "Produkty / vybavení" },
+      { value: "services", label: "Služby NEXT8" },
+      { value: "discount", label: "Sleva / slevový kód" },
+      { value: "other", label: "Jiné" },
+    ],
+    they_give: [
+      { value: "post", label: "Příspěvek na sociálních sítích" },
+      { value: "story", label: "Story / reels" },
+      { value: "event", label: "Účast na akci" },
+      { value: "photo_shoot", label: "Focení / natáčení" },
+      { value: "wear", label: "Nošení / používání produktů" },
+      { value: "referral", label: "Doporučení / přivedení zákazníků" },
+      { value: "other", label: "Jiné" },
+    ],
+  },
+  partner: {
+    we_give: [
+      { value: "visibility", label: "Logo / viditelnost" },
+      { value: "promotion", label: "Propagace na sítích a webu" },
+      { value: "tickets", label: "Vstupenky / VIP" },
+      { value: "products", label: "Produkty / vybavení" },
+      { value: "services", label: "Služby NEXT8" },
+      { value: "fee", label: "Finanční plnění" },
+      { value: "other", label: "Jiné" },
+    ],
+    they_give: [
+      { value: "payment", label: "Finanční plnění" },
+      { value: "goods", label: "Věcné plnění / produkty" },
+      { value: "services", label: "Služby" },
+      { value: "discount", label: "Sleva pro NEXT8 / členy" },
+      { value: "event", label: "Akce / aktivace" },
+      { value: "other", label: "Jiné" },
+    ],
+  },
+} as const satisfies Record<"ambassador" | "partner", Record<"we_give" | "they_give", readonly { value: string; label: string }[]>>;
+
+export function termTypes(subjectType: "ambassador" | "partner", direction: "we_give" | "they_give"): readonly { value: string; label: string }[] {
+  return TERM_TYPES[subjectType][direction];
+}
+
+export const TERM_PERIODS = [
+  { value: "one_off", label: "Jednorázově", short: "celkem" },
+  { value: "monthly", label: "Měsíčně", short: "měs." },
+  { value: "quarterly", label: "Čtvrtletně", short: "čtvrtletí" },
+  { value: "season", label: "Za sezónu", short: "sezóna" },
+  { value: "yearly", label: "Ročně", short: "rok" },
+] as const;
+
+export const ATTACHMENT_CATEGORIES = [
+  { value: "contract", label: "Smlouva" },
+  { value: "amendment", label: "Dodatek" },
+  { value: "invoice", label: "Faktura" },
+  { value: "brief", label: "Brief / podklady" },
+  { value: "other", label: "Jiné" },
+] as const;
+
 export function findMeta<T extends { value: string; label: string; color?: string }>(
   list: readonly T[],
   value: string | null | undefined,

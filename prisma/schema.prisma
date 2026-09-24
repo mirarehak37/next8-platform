@@ -49,6 +49,11 @@ model Tenant {
   activities   Activity[]
   tasks        Task[]
   roadmapItems RoadmapItem[]
+
+  ambassadors  Ambassador[]
+  partners     Partner[]
+  terms        PartnershipTerm[]
+  fulfillments PartnershipFulfillment[]
 }
 
 model User {
@@ -84,6 +89,10 @@ model User {
 
   ownedRoadmapItems   RoadmapItem[] @relation("RoadmapOwner")
   createdRoadmapItems RoadmapItem[] @relation("RoadmapCreator")
+
+  ownedAmbassadors     Ambassador[]             @relation("AmbassadorOwner")
+  ownedPartners        Partner[]                @relation("PartnerOwner")
+  recordedFulfillments PartnershipFulfillment[] @relation("FulfillmentRecorder")
 
   comments      Comment[]
   attachments   Attachment[]
@@ -262,9 +271,20 @@ model Attachment {
   uploadedById String
   createdAt    DateTime @default(now())
 
-  uploadedBy User @relation(fields: [uploadedById], references: [id])
+  uploadedBy User               @relation(fields: [uploadedById], references: [id])
+  content    AttachmentContent?
 
   @@index([tenantId, entityType, entityId])
+}
+
+// File bytes live in their own table so listing attachments never drags the payload
+// along. Postgres-backed on purpose: Vercel functions have no persistent disk and no
+// object storage is provisioned yet — contracts are small PDFs, capped at upload.
+model AttachmentContent {
+  attachmentId String @id
+  data         Bytes
+
+  attachment Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
 }
 
 model Tag {
@@ -512,6 +532,9 @@ model Company {
   quotes    Quote[]
   clubTeams ClubTeam[]
 
+  ambassadors Ambassador[]
+  sponsors    Partner[]
+
   @@index([tenantId, status])
   @@index([tenantId, name])
   @@index([tenantId, sport])
@@ -589,6 +612,9 @@ model Contact {
   leads        Lead[]
   quotes       Quote[]
   clubTeams    ClubTeamContact[]
+
+  ambassadorProfiles Ambassador[]
+  partnerContacts    Partner[]
 
   @@index([tenantId, lastName])
 }
@@ -890,4 +916,124 @@ model RoadmapItem {
 
   @@index([tenantId, status])
   @@index([tenantId, parentId])
+}
+
+// =========================================================================
+// PARTNERSHIPS — ambassadors (people) and partners/sponsors (organizations).
+// Both are a contract with two-sided terms: what NEXT8 gives (fee, products,
+// discount…) and what the other side must deliver (posts, events, logo…).
+// Terms are polymorphic via subjectType/subjectId (same pattern as Task and
+// Activity) so both modules share one terms + fulfilment implementation.
+// =========================================================================
+
+model Ambassador {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  firstName          String
+  lastName           String
+  nickname           String?
+  email              String?
+  phone              String?
+  birthDate          DateTime?
+  sport              String?
+  position           String? // útočník | brankář | trenér | influencer …
+  companyId          String? // club the ambassador plays for
+  contactId          String? // optional link to an existing CRM contact
+  instagram          String?
+  tiktok             String?
+  youtube            String?
+  followers          Int?
+  status             String    @default("candidate") // candidate | negotiation | active | paused | ended
+  tier               String? // top | standard | micro
+  contractStart      DateTime?
+  contractEnd        DateTime?
+  discountCode       String?
+  billingType        String? // invoice | dpp | barter | none
+  registrationNumber String? // IČO (invoicing as OSVČ)
+  bankAccount        String?
+  ownerId            String
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner   User     @relation("AmbassadorOwner", fields: [ownerId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([tenantId, contractEnd])
+}
+
+model Partner {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  name               String
+  kind               String    @default("next8_partner") // next8_partner | club_sponsor
+  level              String? // generální | hlavní | oficiální | technický | mediální | dodavatel
+  registrationNumber String? // IČO
+  website            String?
+  email              String?
+  phone              String?
+  contactId          String? // contact person
+  companyId          String? // club_sponsor: the sponsored club
+  status             String    @default("negotiation") // prospect | negotiation | active | paused | ended
+  contractStart      DateTime?
+  contractEnd        DateTime?
+  ownerId            String
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner   User     @relation("PartnerOwner", fields: [ownerId], references: [id])
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, kind, status])
+  @@index([tenantId, contractEnd])
+}
+
+model PartnershipTerm {
+  id          String    @id @default(cuid())
+  tenantId    String
+  subjectType String // ambassador | partner
+  subjectId   String
+  direction   String // we_give (NEXT8 → them) | they_give (them → NEXT8)
+  type        String // fee | bonus | products | … | posts | event | logo …
+  title       String
+  description String?
+  amount      Float? // money value per period
+  quantity    Int? // deliverable count per period (e.g. 4 posts)
+  period      String    @default("one_off") // one_off | monthly | quarterly | season | yearly
+  dueDate     DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fulfillments PartnershipFulfillment[]
+
+  @@index([tenantId, subjectType, subjectId])
+}
+
+// One logged delivery against a term: a payout we made, products shipped, a post
+// they published (with link), an event they attended…
+model PartnershipFulfillment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  termId       String
+  date         DateTime
+  quantity     Int      @default(1)
+  amount       Float?
+  link         String?
+  note         String?
+  recordedById String
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  term       PartnershipTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+  recordedBy User            @relation("FulfillmentRecorder", fields: [recordedById], references: [id])
+
+  @@index([tenantId, termId, date])
 }
