@@ -9,22 +9,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
 import { FormSelect } from "@/components/form-select";
-import { IMPORT_ENTITIES, IMPORT_FIELDS, type ImportEntity } from "@/lib/import-config";
+import { IMPORT_ENTITIES, IMPORT_FIELDS, IMPORT_REQUIRED_GROUPS, roleFromHeader, type ImportEntity } from "@/lib/import-config";
 import { parseImportFile, parseImportText, type ParsedTable } from "@/lib/import-parser";
 import { bulkImport, type ImportResult } from "@/lib/actions/import";
 import { Upload, FileSpreadsheet, ClipboardPaste, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 
 type Step = "source" | "mapping" | "result";
 
+const CHUNK = 250;
+
 function guessMapping(headers: string[], entity: ImportEntity): Record<number, string> {
   const fields = IMPORT_FIELDS[entity];
   const mapping: Record<number, string> = {};
+  const taken = new Set<string>();
   headers.forEach((header, i) => {
     const norm = header.toLowerCase().trim();
-    const match = fields.find(
-      (f) => f.key.toLowerCase() === norm || f.label.toLowerCase() === norm || norm.includes(f.label.toLowerCase()) || f.label.toLowerCase().includes(norm),
-    );
-    if (match) mapping[i] = match.key;
+    if (!norm) return;
+    const match =
+      fields.find((f) => !taken.has(f.key) && (f.key.toLowerCase() === norm || f.aliases?.includes(norm))) ??
+      fields.find(
+        (f) => !taken.has(f.key) && (f.label.toLowerCase() === norm || norm.includes(f.label.toLowerCase()) || f.label.toLowerCase().includes(norm)),
+      );
+    if (match) {
+      mapping[i] = match.key;
+      taken.add(match.key);
+    }
   });
   return mapping;
 }
@@ -41,6 +50,7 @@ export function ImportWizard() {
   const [isParsing, setIsParsing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [progress, setProgress] = useState(0);
 
   const fields = IMPORT_FIELDS[entity];
 
@@ -81,24 +91,50 @@ export function ImportWizard() {
       for (const [colIndex, fieldKey] of Object.entries(mapping)) {
         if (fieldKey) obj[fieldKey] = row[Number(colIndex)] ?? "";
       }
-      return { obj, hasRequired: fields.filter((f) => f.required).every((f) => usedFields.has(f.key) && obj[f.key]?.trim()) };
+      // Extra people: default their role from the name column's header.
+      for (const n of ["p2", "p3"]) {
+        const col = Object.entries(mapping).find(([, k]) => k === `${n}Name`)?.[0];
+        if (col !== undefined && obj[`${n}Name`]?.trim() && !obj[`${n}Role`]?.trim()) {
+          obj[`${n}Role`] = roleFromHeader(table.headers[Number(col)]) ?? "";
+        }
+      }
+      const groups = IMPORT_REQUIRED_GROUPS[entity]?.groups;
+      const hasRequired = groups
+        ? groups.some((g) => g.every((k) => usedFields.has(k) && obj[k]?.trim()))
+        : fields.filter((f) => f.required).every((f) => usedFields.has(f.key) && obj[f.key]?.trim());
+      return { obj, hasRequired };
     });
-  }, [table, mapping, fields]);
+  }, [table, mapping, fields, entity]);
 
-  const requiredMapped = fields.filter((f) => f.required).every((f) => Object.values(mapping).includes(f.key));
+  const mappedKeys = Object.values(mapping);
+  const requiredGroups = IMPORT_REQUIRED_GROUPS[entity]?.groups;
+  const requiredMapped = requiredGroups
+    ? requiredGroups.some((g) => g.every((k) => mappedKeys.includes(k)))
+    : fields.filter((f) => f.required).every((f) => mappedKeys.includes(f.key));
   const validRowCount = mappedRows.filter((r) => r.hasRequired).length;
 
   async function handleImport() {
     setIsImporting(true);
     try {
-      const res = await bulkImport(entity, mappedRows.map((r) => r.obj));
-      setResult(res);
+      // Send in chunks so a large file never hits the server's time limit.
+      const rows = mappedRows.map((r) => r.obj);
+      const total: ImportResult = { created: 0, skipped: 0, linked: 0, errors: [] };
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const res = await bulkImport(entity, rows.slice(i, i + CHUNK));
+        total.created += res.created;
+        total.skipped += res.skipped;
+        total.linked = (total.linked ?? 0) + (res.linked ?? 0);
+        total.errors.push(...res.errors.map((e) => ({ ...e, row: e.row + i })));
+        setProgress(Math.min(i + CHUNK, rows.length));
+      }
+      setResult(total);
       setStep("result");
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Import se nezdařil.");
     } finally {
       setIsImporting(false);
+      setProgress(0);
     }
   }
 
@@ -195,7 +231,7 @@ export function ImportWizard() {
               ))}
               {!requiredMapped && (
                 <p className="text-xs text-destructive pt-2">
-                  Namapujte všechna povinná pole: {fields.filter((f) => f.required).map((f) => f.label).join(", ")}.
+                  Namapujte všechna povinná pole: {IMPORT_REQUIRED_GROUPS[entity]?.label ?? fields.filter((f) => f.required).map((f) => f.label).join(", ")}.
                 </p>
               )}
             </CardContent>
@@ -234,7 +270,7 @@ export function ImportWizard() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={reset}><ArrowLeft className="h-3.5 w-3.5" /> Zpět</Button>
             <Button onClick={handleImport} disabled={!requiredMapped || validRowCount === 0 || isImporting}>
-              {isImporting ? "Importuji…" : `Importovat ${validRowCount} záznamů`}
+              {isImporting ? `Importuji… ${progress} / ${validRowCount}` : `Importovat ${validRowCount} záznamů`}
             </Button>
           </div>
         </div>
@@ -246,11 +282,17 @@ export function ImportWizard() {
             <CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="h-4.5 w-4.5 text-emerald-600" /> Import dokončen</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${entity === "contact" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div className="rounded-md border p-3">
                 <div className="text-2xl font-semibold">{result.created}</div>
                 <div className="text-xs text-muted-foreground">Vytvořeno záznamů</div>
               </div>
+              {entity === "contact" && (
+                <div className="rounded-md border p-3">
+                  <div className="text-2xl font-semibold">{result.linked ?? 0}</div>
+                  <div className="text-xs text-muted-foreground">Existující kontakt jen připojen ke klubu / týmu</div>
+                </div>
+              )}
               <div className="rounded-md border p-3">
                 <div className="text-2xl font-semibold">{result.skipped}</div>
                 <div className="text-xs text-muted-foreground">Přeskočeno (chyby)</div>
