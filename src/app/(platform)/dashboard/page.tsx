@@ -8,7 +8,7 @@ import { MyTasksWidget, ActivityFeedWidget, TopPerformersWidget, StaleDealsWidge
 import { WeekAgenda } from "@/components/dashboard/week-agenda";
 import { allowedKinds, loadCalendarEntries } from "@/lib/calendar-items";
 import { toPragueWallClock } from "@/lib/marketing";
-import { formatCurrencyCompact } from "@/lib/format";
+import { APP_TZ, formatCurrencyCompact, todayDateOnly } from "@/lib/format";
 import {
   Wallet, TrendingUp, UserPlus, Handshake, Trophy, Percent, Target, Clock,
 } from "lucide-react";
@@ -32,9 +32,6 @@ export default async function DashboardPage() {
   ]);
 
   const now = new Date();
-  const todayStart = daysAgo(0);
-  const tomorrowStart = new Date(todayStart);
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
 
   const [
     openDeals,
@@ -66,7 +63,8 @@ export default async function DashboardPage() {
     prisma.lead.count({ where: { ...leadScope, createdAt: { gte: daysAgo(90) } } }),
     prisma.lead.count({ where: { ...leadScope, status: "converted", createdAt: { gte: daysAgo(90) } } }),
     prisma.task.findMany({
-      where: { tenantId: user.tenantId, assigneeId: user.id, status: { in: ["open", "in_progress"] }, dueDate: { gte: todayStart, lt: tomorrowStart } },
+      // Today's plus anything overdue — overdue work shouldn't disappear from "my tasks".
+      where: { tenantId: user.tenantId, assigneeId: user.id, status: { in: ["open", "in_progress"] }, dueDate: { lt: new Date(todayDateOnly().getTime() + 86400000) } },
       orderBy: { dueDate: "asc" },
       take: 8,
     }),
@@ -196,7 +194,7 @@ export default async function DashboardPage() {
                 <div key={m.id} className="flex items-center justify-between text-sm">
                   <span className="truncate">{m.subject}</span>
                   <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                    {new Date(m.activityAt).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" })}
+                    {new Date(m.activityAt).toLocaleDateString("cs-CZ", { timeZone: APP_TZ, day: "numeric", month: "short" })}
                   </span>
                 </div>
               ))}

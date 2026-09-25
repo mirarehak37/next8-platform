@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/rbac";
+import { ownerScopeWhere } from "@/lib/scope";
 import type { CalendarItem } from "@/components/calendar/month-calendar";
 import { MARKETING_CHANNELS, findMeta } from "@/lib/constants";
 import { toPragueWallClock } from "@/lib/marketing";
@@ -54,17 +55,19 @@ export async function loadCalendarEntries(
   today.setHours(0, 0, 0, 0);
   const showAmb = can(user.role, "ambassador", "view");
   const showPartners = can(user.role, "partner", "view");
+  // Same visibility as the Úkoly / Aktivity lists, so the calendar never shows more (or less).
+  const [taskScope, activityScope] = await Promise.all([ownerScopeWhere(user, "task", "assigneeId"), ownerScopeWhere(user, "activity")]);
 
   const [tasks, activities, events, posts, content, deadlines] = await Promise.all([
     want.has("tasks")
       ? prisma.task.findMany({
-          where: { tenantId: t, dueDate: { gte: from, lt: to }, status: { not: "cancelled" }, ...(mine ? { assigneeId: user.id } : {}) },
+          where: { ...taskScope, dueDate: { gte: from, lt: to }, status: { not: "cancelled" }, ...(mine ? { assigneeId: user.id } : {}) },
           select: { id: true, title: true, dueDate: true, status: true, assignee: { select: { name: true } } },
         })
       : [],
     want.has("activities")
       ? prisma.activity.findMany({
-          where: { tenantId: t, activityAt: { gte: from, lt: to }, type: { not: "note" }, ...(mine ? { ownerId: user.id } : {}) },
+          where: { ...activityScope, activityAt: { gte: from, lt: to }, type: { not: "note" }, ...(mine ? { ownerId: user.id } : {}) },
           select: { id: true, subject: true, activityAt: true, subjectType: true, subjectId: true, owner: { select: { name: true } } },
         })
       : [],

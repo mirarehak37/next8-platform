@@ -96,7 +96,7 @@ export function TasksTable({ data, assignees }: { data: TaskRow[]; assignees: { 
               title: row.original.title,
               description: row.original.description,
               assigneeId: row.original.assigneeId,
-              dueDate: row.original.dueDate ?? undefined,
+              dueDate: row.original.dueDate?.slice(0, 10) ?? undefined,
               priority: row.original.priority,
               status: row.original.status,
             }}

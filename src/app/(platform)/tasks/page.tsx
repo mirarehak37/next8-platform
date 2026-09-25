@@ -1,12 +1,14 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ownerScopeWhere } from "@/lib/scope";
+import { todayDateOnly } from "@/lib/format";
 import { PageHeader } from "@/components/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TasksTable, type TaskRow } from "./tasks-table";
 import { TasksKanban } from "./tasks-kanban";
 
-export default async function TasksPage() {
+export default async function TasksPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
+  const { filter } = await searchParams;
   const session = await auth();
   const user = session!.user;
 
@@ -18,12 +20,10 @@ export default async function TasksPage() {
   });
   const assignees = await prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } });
 
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
-  const weekEnd = new Date(todayStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  // Due dates are date-only (UTC midnight); compare against today's date in Czech time.
+  const todayStart = todayDateOnly();
+  const todayEnd = new Date(todayStart.getTime() + 86400000);
+  const weekEnd = new Date(todayStart.getTime() + 7 * 86400000);
 
   const rows: TaskRow[] = tasks.map((t) => ({
     id: t.id,
@@ -36,7 +36,7 @@ export default async function TasksPage() {
     status: t.status,
     subjectType: t.subjectType,
     subjectId: t.subjectId,
-    isOverdue: !!t.dueDate && t.dueDate < now && t.status !== "done" && t.status !== "cancelled",
+    isOverdue: !!t.dueDate && t.dueDate < todayStart && t.status !== "done" && t.status !== "cancelled",
   }));
 
   const myRows = rows.filter((r) => r.assigneeId === user.id);
@@ -48,7 +48,7 @@ export default async function TasksPage() {
     <div>
       <PageHeader title="Úkoly" description={`${rows.length} úkolů celkem · ${overdueRows.length} po termínu`} breadcrumbs={[{ label: "Úkoly" }]} />
       <div className="p-6">
-        <Tabs defaultValue="all">
+        <Tabs defaultValue={["mine", "today", "week", "overdue", "kanban"].includes(filter ?? "") ? filter : "all"}>
           <TabsList>
             <TabsTrigger value="all">Vše ({rows.length})</TabsTrigger>
             <TabsTrigger value="mine">Moje ({myRows.length})</TabsTrigger>

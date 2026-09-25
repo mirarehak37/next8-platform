@@ -40,8 +40,9 @@ export function ContentBoard({
   const [channel, setChannel] = useState(ALL);
   const [audience, setAudience] = useState(ALL);
   const [campaign, setCampaign] = useState(ALL);
-  // Optimistic status while a drag is being saved; the server data wins after refresh.
-  const [moved, setMoved] = useState<Record<string, string>>({});
+  // Optimistic status while a drag is being saved. It only applies while the server still
+  // reports the status the card was dragged from — any newer server state wins.
+  const [moved, setMoved] = useState<Record<string, { from: string; to: string }>>({});
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
@@ -50,7 +51,7 @@ export function ContentBoard({
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return posts
-      .map((p) => (moved[p.id] ? { ...p, status: moved[p.id] } : p))
+      .map((p) => (moved[p.id] && moved[p.id].from === p.status ? { ...p, status: moved[p.id].to } : p))
       .filter((p) =>
         (channel === ALL || p.channel === channel) &&
         (audience === ALL || p.audience === audience) &&
@@ -71,7 +72,8 @@ export function ContentBoard({
     const target = String(e.over.id);
     const post = filtered.find((p) => p.id === id);
     if (!post || post.status === target) return;
-    setMoved((m) => ({ ...m, [id]: target }));
+    const from = posts.find((p) => p.id === id)?.status ?? post.status;
+    setMoved((m) => ({ ...m, [id]: { from, to: target } }));
     try {
       await setPostStatus(id, target);
       if (target === "scheduled" && !post.scheduledAt) toast.info("Nezapomeňte příspěvku nastavit datum publikace.");
