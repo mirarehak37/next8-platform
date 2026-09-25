@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export type CalendarItem = { label: string; href?: string; tone?: "default" | "sky" | "violet" | "emerald" | "rose" | "amber" | "brand"; title?: string };
+export type CalendarItem = { label: string; href?: string; tone?: "default" | "sky" | "violet" | "indigo" | "emerald" | "rose" | "amber" | "brand"; title?: string };
 
 const TONES: Record<NonNullable<CalendarItem["tone"]>, string> = {
   default: "bg-muted",
   sky: "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300",
   violet: "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300",
+  indigo: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300",
   emerald: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
   rose: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
   amber: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
@@ -75,15 +76,13 @@ export function MonthCalendar({ year, month, byDay, maxPerDay = 3 }: { year: num
                     {date.getDate()}
                   </div>
                   <div className="space-y-1">
-                    {items.slice(0, maxPerDay).map((item, idx) => {
-                      const cls = cn("block text-[10px] leading-tight px-1 py-0.5 rounded truncate", TONES[item.tone ?? "default"]);
-                      return item.href ? (
-                        <Link key={idx} href={item.href} className={cn(cls, "hover:opacity-80")} title={item.title ?? item.label}>{item.label}</Link>
-                      ) : (
-                        <div key={idx} className={cls} title={item.title ?? item.label}>{item.label}</div>
-                      );
-                    })}
-                    {items.length > maxPerDay && <div className="text-[10px] text-muted-foreground px-1">+{items.length - maxPerDay} další</div>}
+                    {items.slice(0, maxPerDay).map((item, idx) => <Chip key={idx} item={item} />)}
+                    {items.length > maxPerDay && (
+                      <details className="group">
+                        <summary className="cursor-pointer list-none text-[10px] text-muted-foreground px-1 hover:text-foreground group-open:hidden">+{items.length - maxPerDay} další</summary>
+                        <div className="space-y-1">{items.slice(maxPerDay).map((item, idx) => <Chip key={idx} item={item} />)}</div>
+                      </details>
+                    )}
                   </div>
                 </>
               )}
@@ -92,5 +91,14 @@ export function MonthCalendar({ year, month, byDay, maxPerDay = 3 }: { year: num
         })}
       </div>
     </div>
+  );
+}
+
+function Chip({ item }: { item: CalendarItem }) {
+  const cls = cn("block text-[10px] leading-tight px-1 py-0.5 rounded truncate", TONES[item.tone ?? "default"]);
+  return item.href ? (
+    <Link href={item.href} className={cn(cls, "hover:opacity-80")} title={item.title ?? item.label}>{item.label}</Link>
+  ) : (
+    <div className={cls} title={item.title ?? item.label}>{item.label}</div>
   );
 }

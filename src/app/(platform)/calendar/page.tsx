@@ -1,117 +1,84 @@
+import Link from "next/link";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { can } from "@/lib/rbac";
 import { PageHeader } from "@/components/page-header";
-import { StatusBadge } from "@/components/status-badge";
 import { MonthCalendar, MonthNav, addToDays, monthRange, type CalendarItem } from "@/components/calendar/month-calendar";
+import { CALENDAR_KINDS, allowedKinds, loadCalendarEntries, parseKinds, type CalendarKind } from "@/lib/calendar-items";
+import { cn } from "@/lib/utils";
 
-export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ y?: string; m?: string }> }) {
-  const { y, m } = await searchParams;
+const DOT: Record<string, string> = {
+  brand: "bg-[#FF1947]", sky: "bg-sky-500", violet: "bg-violet-500", indigo: "bg-indigo-500", amber: "bg-amber-500",
+};
+
+export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ y?: string; m?: string; f?: string; mine?: string }> }) {
+  const { y, m, f, mine } = await searchParams;
   const session = await auth();
   const user = session!.user;
 
-  const { year, month, start: rangeStart, end: rangeEnd } = monthRange(y, m);
-  const today = new Date(new Date().toDateString());
-  const showEvents = can(user.role, "event", "view");
-  const showContent = can(user.role, "ambassador", "view");
-
-  const showPartners = can(user.role, "partner", "view");
-  const [tasks, activities, events, content, deadlines] = await Promise.all([
-    prisma.task.findMany({
-      where: { tenantId: user.tenantId, dueDate: { gte: rangeStart, lt: rangeEnd } },
-      include: { assignee: { select: { name: true } } },
-    }),
-    prisma.activity.findMany({
-      where: { tenantId: user.tenantId, activityAt: { gte: rangeStart, lt: rangeEnd } },
-      include: { owner: { select: { name: true } } },
-    }),
-    showEvents
-      ? prisma.event.findMany({
-          // Multi-day events that started earlier but still run into this month count too.
-          where: { tenantId: user.tenantId, startDate: { lt: rangeEnd }, OR: [{ endDate: { gte: rangeStart } }, { endDate: null, startDate: { gte: rangeStart } }] },
-          select: { id: true, name: true, startDate: true, endDate: true, status: true },
-        })
-      : [],
-    showContent
-      ? prisma.partnershipFulfillment.findMany({
-          where: { tenantId: user.tenantId, status: "planned", date: { gte: rangeStart, lt: rangeEnd }, term: { subjectType: "ambassador" } },
-          include: { term: { select: { title: true, subjectId: true } } },
-        })
-      : [],
-    // "Termín splnění" deadlines of ambassador / partner terms.
-    showContent || showPartners
-      ? prisma.partnershipTerm.findMany({
-          where: {
-            tenantId: user.tenantId,
-            isActive: true,
-            dueDate: { gte: rangeStart, lt: rangeEnd },
-            subjectType: { in: [...(showContent ? ["ambassador"] : []), ...(showPartners ? ["partner"] : [])] },
-          },
-          select: { title: true, subjectType: true, subjectId: true, dueDate: true, _count: { select: { fulfillments: { where: { status: "done" } } } } },
-        })
-      : [],
-  ]);
-
-  const ambassadorIds = [...new Set([...content.map((c) => c.term.subjectId), ...deadlines.filter((d) => d.subjectType === "ambassador").map((d) => d.subjectId)])];
-  const partnerIds = [...new Set(deadlines.filter((d) => d.subjectType === "partner").map((d) => d.subjectId))];
-  const partners = partnerIds.length ? await prisma.partner.findMany({ where: { id: { in: partnerIds } }, select: { id: true, name: true } }) : [];
-  const partnerName = new Map(partners.map((p) => [p.id, p.name]));
-  const ambassadors = ambassadorIds.length
-    ? await prisma.ambassador.findMany({ where: { id: { in: ambassadorIds } }, select: { id: true, firstName: true, lastName: true } })
-    : [];
-  const ambassadorName = new Map(ambassadors.map((a) => [a.id, `${a.firstName} ${a.lastName}`]));
+  const { year, month, start, end } = monthRange(y, m);
+  const allowed = allowedKinds(user.role);
+  const kinds = parseKinds(f, user.role);
+  const onlyMine = mine === "1";
+  // Pad by a day each side so items near midnight UTC still land in the right Prague day.
+  const entries = await loadCalendarEntries(user, new Date(start.getTime() - 86400000), new Date(end.getTime() + 86400000), { kinds, mine: onlyMine });
 
   const byDay = new Map<number, CalendarItem[]>();
-  for (const e of events) {
-    if (e.status === "cancelled") continue;
-    addToDays(byDay, year, month, e.startDate, e.endDate, { label: e.name, href: `/events/${e.id}`, tone: "brand" });
-  }
-  for (const t of tasks) {
-    if (!t.dueDate) continue;
-    addToDays(byDay, year, month, t.dueDate, null, { label: t.title, tone: "sky", title: `Úkol: ${t.title} (${t.assignee.name})` });
-  }
-  for (const a of activities) {
-    addToDays(byDay, year, month, a.activityAt, null, { label: a.subject, tone: "violet" });
-  }
-  for (const c of content) {
-    const late = c.date < today;
-    addToDays(byDay, year, month, c.date, null, {
-      label: `${late ? "⚠ " : ""}${ambassadorName.get(c.term.subjectId) ?? ""} · ${c.term.title}`,
-      href: `/crm/ambassadors/${c.term.subjectId}`,
-      tone: late ? "rose" : "amber",
-    });
+  for (const e of entries) {
+    const time = e.timed ? `${String(e.start.getHours()).padStart(2, "0")}:${String(e.start.getMinutes()).padStart(2, "0")} ` : "";
+    addToDays(byDay, year, month, e.start, e.end, { ...e, label: `${time}${e.label}` });
   }
 
-  for (const d of deadlines) {
-    if (!d.dueDate) continue;
-    const isAmb = d.subjectType === "ambassador";
-    const who = isAmb ? ambassadorName.get(d.subjectId) : partnerName.get(d.subjectId);
-    const done = d._count.fulfillments > 0;
-    const late = !done && d.dueDate < today;
-    addToDays(byDay, year, month, d.dueDate, null, {
-      label: `${done ? "✓ " : late ? "⚠ " : "⏰ "}${who ?? ""} · ${d.title}`,
-      title: `Termín splnění: ${who ?? ""} · ${d.title}`,
-      href: `/crm/${isAmb ? "ambassadors" : "partners"}/${d.subjectId}`,
-      tone: done ? "emerald" : late ? "rose" : "amber",
-    });
-  }
+  const query = (next: { f?: CalendarKind[]; mine?: boolean }) => {
+    const p = new URLSearchParams({ y: String(year), m: String(month + 1) });
+    const fk = next.f ?? kinds;
+    if (fk.length && fk.length < allowed.length) p.set("f", fk.join(","));
+    if (next.mine ?? onlyMine) p.set("mine", "1");
+    return `/calendar?${p}`;
+  };
+  const extra = new URLSearchParams();
+  if (f) extra.set("f", f);
+  if (onlyMine) extra.set("mine", "1");
 
   return (
     <div>
       <PageHeader
         title="Kalendář"
-        description={rangeStart.toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}
+        description={start.toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}
         breadcrumbs={[{ label: "Kalendář" }]}
-        actions={<MonthNav basePath="/calendar" year={year} month={month} />}
+        actions={<MonthNav basePath="/calendar" year={year} month={month} extraQuery={extra.toString()} />}
       />
-      <div className="p-6">
-        <MonthCalendar year={year} month={month} byDay={byDay} />
-        <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          {showEvents && <span className="flex items-center gap-1.5"><StatusBadge label="Akce" color="indigo" /> kempy, testování, workshopy</span>}
-          <span className="flex items-center gap-1.5"><StatusBadge label="Úkoly" color="sky" /> termíny úkolů</span>
-          <span className="flex items-center gap-1.5"><StatusBadge label="Aktivity" color="violet" /> naplánované schůzky a hovory</span>
-          {(showContent || showPartners) && <span className="flex items-center gap-1.5"><StatusBadge label="Obsah / termíny" color="amber" /> naplánované reely a termíny splnění ambasadorů a partnerů</span>}
+      <div className="p-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Link
+            href={query({ f: allowed })}
+            className={cn("rounded-full border px-3 py-1 text-xs", kinds.length === allowed.length ? "bg-foreground text-background border-foreground" : "text-muted-foreground hover:bg-muted")}
+          >
+            Vše
+          </Link>
+          {CALENDAR_KINDS.filter((k) => allowed.includes(k.value)).map((k) => {
+            const on = kinds.includes(k.value) && kinds.length < allowed.length;
+            // Clicking a chip while showing everything isolates it; otherwise it toggles.
+            const next = kinds.length === allowed.length ? [k.value] : on ? kinds.filter((x) => x !== k.value) : [...kinds, k.value];
+            return (
+              <Link
+                key={k.value}
+                href={query({ f: next.length ? next : allowed })}
+                className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs", on ? "border-foreground bg-muted font-medium" : "text-muted-foreground hover:bg-muted")}
+              >
+                <span className={cn("h-2 w-2 rounded-full", DOT[k.tone])} /> {k.label}
+              </Link>
+            );
+          })}
+          <Link
+            href={query({ mine: !onlyMine })}
+            className={cn("sm:ml-auto rounded-full border px-3 py-1 text-xs", onlyMine ? "border-[#FF1947] bg-[#FF1947]/10 text-[#c4002a] dark:text-[#FF1947] font-medium" : "text-muted-foreground hover:bg-muted")}
+          >
+            {onlyMine ? "✓ Jen moje" : "Jen moje"}
+          </Link>
         </div>
+        <MonthCalendar year={year} month={month} byDay={byDay} maxPerDay={4} />
+        <p className="text-xs text-muted-foreground">
+          ✓ hotovo · ⚠ po termínu · ✎ příspěvek ještě není připravený · ⏰ termín splnění. Kliknutím na položku otevřete detail.
+        </p>
       </div>
     </div>
   );

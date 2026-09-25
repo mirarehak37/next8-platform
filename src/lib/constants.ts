@@ -207,6 +207,69 @@ export const PRODUCT_UNITS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Marketing
+// ---------------------------------------------------------------------------
+
+export const POST_STATUSES = [
+  { value: "idea", label: "Nápad", color: "slate" },
+  { value: "draft", label: "V přípravě", color: "sky" },
+  { value: "review", label: "Ke schválení", color: "amber" },
+  { value: "scheduled", label: "Naplánováno", color: "indigo" },
+  { value: "published", label: "Publikováno", color: "emerald" },
+  { value: "cancelled", label: "Zrušeno", color: "rose" },
+] as const;
+
+export const MARKETING_CHANNELS = [
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "facebook", label: "Facebook" },
+  { value: "youtube", label: "YouTube" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "meta_ads", label: "Meta reklama" },
+  { value: "web", label: "Web / blog" },
+  { value: "email", label: "E-mail / newsletter" },
+  { value: "direct", label: "Přímé oslovení" },
+  { value: "other", label: "Jiné" },
+] as const;
+
+export const POST_FORMATS = [
+  { value: "post", label: "Post" },
+  { value: "carousel", label: "Carousel" },
+  { value: "story", label: "Story" },
+  { value: "reel", label: "Reels" },
+  { value: "video", label: "Video" },
+  { value: "article", label: "Článek" },
+  { value: "newsletter", label: "Newsletter" },
+  { value: "ad", label: "Reklama" },
+] as const;
+
+// NEXT8 rule: every piece of content is written for exactly one audience.
+export const MARKETING_AUDIENCES = [
+  { value: "player", label: "Hráč", color: "sky" },
+  { value: "coach", label: "Trenér", color: "indigo" },
+  { value: "parent", label: "Rodič", color: "violet" },
+  { value: "club", label: "Klub", color: "amber" },
+] as const;
+
+export const CONTENT_PILLARS = [
+  "Připravenost a data",
+  "Tipy a cviky",
+  "Regenerace a výživa",
+  "Příběhy hráčů a týmů",
+  "Produkt a novinky",
+  "Ambasadoři",
+  "Zákulisí",
+  "Akce a kempy",
+] as const;
+
+export const CAMPAIGN_STATUSES = [
+  { value: "planned", label: "Plánovaná", color: "slate" },
+  { value: "active", label: "Běží", color: "emerald" },
+  { value: "paused", label: "Pozastavená", color: "amber" },
+  { value: "done", label: "Ukončená", color: "sky" },
+] as const;
+
+// ---------------------------------------------------------------------------
 // Events — camps, testing, workshops
 // ---------------------------------------------------------------------------
 

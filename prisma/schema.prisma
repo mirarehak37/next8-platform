@@ -57,6 +57,9 @@ model Tenant {
 
   events             Event[]
   eventRegistrations EventRegistration[]
+
+  marketingCampaigns MarketingCampaign[]
+  marketingPosts     MarketingPost[]
 }
 
 model User {
@@ -97,6 +100,8 @@ model User {
   ownedPartners        Partner[]                @relation("PartnerOwner")
   recordedFulfillments PartnershipFulfillment[] @relation("FulfillmentRecorder")
   ownedEvents          Event[]                  @relation("EventOwner")
+  ownedCampaigns       MarketingCampaign[]      @relation("CampaignOwner")
+  ownedPosts           MarketingPost[]          @relation("PostOwner")
 
   comments      Comment[]
   attachments   Attachment[]
@@ -984,6 +989,7 @@ model Ambassador {
 
   eventRegistrations EventRegistration[]
   deals              Deal[]
+  marketingPosts     MarketingPost[]
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   owner   User     @relation("AmbassadorOwner", fields: [ownerId], references: [id])
@@ -1141,4 +1147,77 @@ model EventRegistration {
   company    Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, eventId])
+}
+
+// =========================================================================
+// MARKETING — content pipeline (ideas → published posts with results) and
+// campaigns (goal, budget, UTM, leads). Audience follows NEXT8's rule: every
+// piece of content is written for exactly one of player / coach / parent / club.
+// =========================================================================
+
+model MarketingCampaign {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  goal        String? // what the campaign should achieve
+  audience    String? // player | coach | parent | club
+  channels    String[]  @default([])
+  status      String    @default("planned") // planned | active | paused | done
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float?
+  spent       Float?
+  utmCampaign String? // utm_campaign value; leads with this campaign are attributed
+  targetLeads Int?
+  description String?
+  ownerId     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User            @relation("CampaignOwner", fields: [ownerId], references: [id])
+  posts  MarketingPost[]
+
+  @@index([tenantId, status])
+}
+
+model MarketingPost {
+  id           String    @id @default(cuid())
+  tenantId     String
+  title        String
+  status       String    @default("idea") // idea | draft | review | scheduled | published | cancelled
+  channel      String    @default("instagram") // instagram | tiktok | facebook | youtube | linkedin | web | email | meta_ads | other
+  format       String? // post | carousel | story | reel | video | article | newsletter | ad
+  audience     String? // player | coach | parent | club
+  pillar       String? // content pillar (Připravenost, Tipy, Příběhy hráčů…)
+  campaignId   String?
+  ambassadorId String? // collaboration with an ambassador
+  scheduledAt  DateTime?
+  publishedAt  DateTime?
+  caption      String?
+  hashtags     String?
+  cta          String? // what the reader should do
+  assetUrl     String? // Canva / Drive link to the creative
+  link         String? // URL of the published post
+  notes        String? // brief, feedback
+  // Results (filled in after publishing)
+  reach        Int?
+  impressions  Int?
+  likes        Int?
+  comments     Int?
+  shares       Int?
+  saves        Int?
+  clicks       Int?
+  followers    Int? // followers gained
+  ownerId      String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner      User               @relation("PostOwner", fields: [ownerId], references: [id])
+  campaign   MarketingCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  ambassador Ambassador?        @relation(fields: [ambassadorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([tenantId, scheduledAt])
 }

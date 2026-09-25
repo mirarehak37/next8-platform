@@ -9,11 +9,13 @@ export default async function LeadsPage() {
   const user = session!.user;
 
   const scope = await ownerScopeWhere(user, "lead");
-  const [leads, owners, pipeline] = await Promise.all([
+  const [leads, owners, pipeline, campaigns] = await Promise.all([
     prisma.lead.findMany({ where: scope, include: { owner: { select: { name: true } } }, orderBy: { createdAt: "desc" } }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.pipeline.findFirst({ where: { tenantId: user.tenantId, isDefault: true }, include: { stages: { orderBy: { order: "asc" } } } }),
+    prisma.marketingCampaign.findMany({ where: { tenantId: user.tenantId }, select: { name: true, utmCampaign: true }, orderBy: { createdAt: "desc" } }),
   ]);
+  const campaignOptions = campaigns.map((c) => ({ value: c.utmCampaign || c.name, label: c.name, hint: c.utmCampaign ?? undefined }));
 
   const rows: LeadRow[] = leads.map((l) => ({
     id: l.id,
@@ -40,7 +42,7 @@ export default async function LeadsPage() {
     <div>
       <PageHeader title="Leady" description={`${rows.length} leadů v procesu kvalifikace`} breadcrumbs={[{ label: "CRM" }, { label: "Leady" }]} />
       <div className="p-6">
-        <LeadsTable data={rows} owners={owners} pipelineId={pipeline?.id ?? ""} firstStageId={firstStage?.id ?? ""} />
+        <LeadsTable data={rows} owners={owners} pipelineId={pipeline?.id ?? ""} firstStageId={firstStage?.id ?? ""} campaigns={campaignOptions} />
       </div>
     </div>
   );
