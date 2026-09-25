@@ -27,15 +27,16 @@ async function dealRefs(tenantId: string, parsed: DealParsed) {
     }
     out.productId = parsed.productId || null;
   }
-  if (parsed.source !== undefined || parsed.ambassadorId !== undefined || parsed.commissionTermId !== undefined) {
+  if (parsed.source !== undefined || parsed.ambassadorId !== undefined || parsed.commissionTermId !== undefined || parsed.commissionAmount !== undefined) {
     const viaAmbassador = parsed.source === AMBASSADOR_SOURCE;
+    out.commissionAmount = viaAmbassador && parsed.ambassadorId ? parsed.commissionAmount ?? null : null;
     const ambassadorId = viaAmbassador ? parsed.ambassadorId || null : null;
     let commissionTermId = viaAmbassador ? parsed.commissionTermId || null : null;
     if (ambassadorId && !(await prisma.ambassador.findFirst({ where: { id: ambassadorId, tenantId }, select: { id: true } }))) {
       throw new ActionError("Ambasador nenalezen.");
     }
     if (commissionTermId) {
-      const term = await prisma.partnershipTerm.findFirst({ where: { id: commissionTermId, tenantId, subjectType: "ambassador", subjectId: ambassadorId ?? "" } });
+      const term = await prisma.partnershipTerm.findFirst({ where: { id: commissionTermId, tenantId, subjectType: "ambassador", subjectId: ambassadorId ?? "", direction: "we_give" } });
       if (!term) commissionTermId = null;
     }
     out.ambassadorId = ambassadorId;

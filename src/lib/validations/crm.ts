@@ -80,6 +80,7 @@ export const dealSchema = z.object({
   discountPercent: z.preprocess((v) => (v === "" || v == null || Number.isNaN(v) ? null : v), z.coerce.number().min(0).max(100).nullable().optional()),
   ambassadorId: z.string().optional().nullable(),
   commissionTermId: z.string().optional().nullable(),
+  commissionAmount: z.preprocess((v) => (v === "" || v == null || Number.isNaN(v) ? null : v), z.coerce.number().min(0).nullable().optional()),
 });
 export type DealInput = z.input<typeof dealSchema>;
 

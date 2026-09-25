@@ -729,6 +729,7 @@ model Deal {
   // (referral code 15 % / brokered by him 30 %…). Commission is paid on "won".
   ambassadorId      String?
   commissionTermId  String?
+  commissionAmount  Float? // fixed commission agreed for this deal (overrides the term)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
