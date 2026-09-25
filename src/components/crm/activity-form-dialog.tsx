@@ -1,5 +1,6 @@
 "use client";
 
+import type * as React from "react";
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,11 +25,13 @@ export function ActivityFormDialog({
   deals,
   defaultSubjectType,
   defaultSubjectId,
+  trigger,
 }: {
   companies: Option[];
   deals: Option[];
   defaultSubjectType?: string;
   defaultSubjectId?: string;
+  trigger?: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -56,7 +59,7 @@ export function ActivityFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4" /> Nová aktivita</Button>} />
+      <DialogTrigger render={trigger ?? <Button size="sm"><Plus className="h-4 w-4" /> Nová aktivita</Button>} />
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nová aktivita</DialogTitle>
