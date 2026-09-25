@@ -31,7 +31,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       clubTeam: { select: { name: true, category: true } },
       product: { select: { name: true } },
       ambassador: { select: { id: true, firstName: true, lastName: true } },
-      commissionTerm: { select: { title: true, percent: true } },
+      commissionTerm: { select: { title: true, percent: true, valueType: true, amount: true } },
     },
   });
   if (!deal) notFound();
@@ -51,6 +51,11 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   const contactOptions = contacts.map((c) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }));
 
   const statusMeta = findMeta(DEAL_STATUSES, deal.status);
+  const pendingCommission =
+    deal.commissionAmount ??
+    (deal.commissionTerm?.valueType === "percent" && deal.commissionTerm.percent != null
+      ? Math.round(deal.value * deal.commissionTerm.percent) / 100
+      : deal.commissionTerm?.amount ?? null);
   const stages = deal.pipeline.stages.filter((s) => !s.isWon && !s.isLost);
   const currentStageIndex = stages.findIndex((s) => s.id === deal.stageId);
 
@@ -89,6 +94,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               discountPercent: deal.discountPercent,
               ambassadorId: deal.ambassadorId,
               commissionTermId: deal.commissionTermId,
+              commissionAmount: deal.commissionAmount,
             }}
             trigger={<DealEditTrigger />}
           />
@@ -143,11 +149,18 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                   <div className="text-sm bg-[#FF1947]/5 rounded-md px-2.5 py-1.5 w-fit">
                     Ambasador:{" "}
                     <Link href={`/crm/ambassadors/${deal.ambassador.id}`} className="font-medium hover:underline">{deal.ambassador.firstName} {deal.ambassador.lastName}</Link>
-                    {deal.commissionTerm && <span className="text-muted-foreground"> · {deal.commissionTerm.title} ({deal.commissionTerm.percent} %)</span>}
+                    {deal.commissionAmount != null ? (
+                      <span className="text-muted-foreground"> · dohodnutá provize</span>
+                    ) : deal.commissionTerm ? (
+                      <span className="text-muted-foreground">
+                        {" "}· {deal.commissionTerm.title} (
+                        {deal.commissionTerm.valueType === "percent" ? `${deal.commissionTerm.percent} %` : `${formatCurrency(deal.commissionTerm.amount ?? 0)} za prodej`})
+                      </span>
+                    ) : null}
                     {commission?.rewardAmount != null ? (
                       <span> · provize <strong>{formatCurrency(commission.rewardAmount)}</strong> {commission.paidAt ? "(vyplaceno)" : "(k výplatě)"}</span>
-                    ) : deal.commissionTerm?.percent ? (
-                      <span className="text-muted-foreground"> · po vyhrání {formatCurrency(Math.round(deal.value * deal.commissionTerm.percent) / 100)}</span>
+                    ) : pendingCommission != null ? (
+                      <span className="text-muted-foreground"> · po vyhrání {formatCurrency(pendingCommission)}</span>
                     ) : null}
                   </div>
                 )}

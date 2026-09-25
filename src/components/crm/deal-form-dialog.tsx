@@ -23,6 +23,7 @@ import { formatCurrency } from "@/lib/format";
 import type { DealFormExtras } from "@/lib/deal-form-extras";
 
 const CUSTOM = "__custom__";
+const OWN = "__own_amount__";
 
 function periodOf(p: { billingPeriod: string | null; name: string }) {
   if (p.billingPeriod === "yearly" || p.billingPeriod === "monthly") return p.billingPeriod;
@@ -77,6 +78,13 @@ export function DealFormDialog({
   const ambassador = extras?.ambassadors.find((a) => a.id === ambassadorId);
   const term = ambassador?.terms.find((t) => t.id === commissionTermId);
   const viaAmbassador = source === AMBASSADOR_SOURCE;
+  const commissionAmount = useWatch({ control, name: "commissionAmount" });
+  const [ownAmount, setOwnAmount] = useState(deal?.commissionAmount != null);
+  const commissionPreview = ownAmount
+    ? commissionAmount != null && commissionAmount !== "" ? Number(commissionAmount) : null
+    : term?.percent != null
+      ? Math.round((Number(value) || 0) * term.percent) / 100
+      : term?.amount ?? null;
   const isCustom = !productId && customPackage != null;
 
   // Deal value = package price minus discount (still editable by hand).
@@ -87,7 +95,9 @@ export function DealFormDialog({
   }
 
   async function onSubmit(values: DealInput) {
-    const data: DealInput = viaAmbassador ? values : { ...values, ambassadorId: null, commissionTermId: null };
+    const data: DealInput = viaAmbassador
+      ? { ...values, commissionAmount: ownAmount ? values.commissionAmount : null }
+      : { ...values, ambassadorId: null, commissionTermId: null, commissionAmount: null };
     try {
       if (isEdit) {
         await updateDeal(deal!.id, data);
@@ -234,31 +244,61 @@ export function DealFormDialog({
                       onChange={(v) => {
                         field.onChange(v);
                         // Default to his highest commission (brokered deal beats referral code).
-                        setValue("commissionTermId", extras.ambassadors.find((a) => a.id === v)?.terms[0]?.id ?? null);
+                        const first = extras.ambassadors.find((a) => a.id === v)?.terms[0]?.id ?? null;
+                        setValue("commissionTermId", first);
+                        setOwnAmount(!first);
                       }}
                       options={extras.ambassadors.map((a) => ({ value: a.id, label: a.name, hint: a.discountCode ?? undefined }))}
                       placeholder="Vyberte ambasadora"
                     />
                   )} />
                 </div>
-                {ambassador && ambassador.terms.length > 0 && (
-                  <div className="col-span-2 space-y-1.5">
-                    <Label>Provize podle</Label>
-                    <Controller control={control} name="commissionTermId" render={({ field }) => (
-                      <FormSelect value={field.value} onChange={field.onChange} options={ambassador.terms.map((t) => ({ value: t.id, label: `${t.title} – ${t.percent} %` }))} />
-                    )} />
-                    {term && (
-                      <p className="text-xs text-muted-foreground">
-                        Po vyhrání obchodu se ambasadorovi zapíše provize <strong className="text-foreground">{formatCurrency(Math.round((Number(value) || 0) * term.percent) / 100)}</strong> ({term.percent} % z {formatCurrency(Number(value) || 0)}) jako „k výplatě“.
+                {ambassador && (
+                  <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Provize</Label>
+                      <FormSelect
+                        value={ownAmount ? OWN : commissionTermId ?? undefined}
+                        onChange={(v) => {
+                          if (v === OWN) {
+                            setOwnAmount(true);
+                            return;
+                          }
+                          setOwnAmount(false);
+                          setValue("commissionAmount", null);
+                          setValue("commissionTermId", v);
+                        }}
+                        options={[
+                          ...ambassador.terms.map((t) => ({
+                            value: t.id,
+                            label: t.percent != null ? `${t.title} – ${t.percent} %` : `${t.title} – ${formatCurrency(t.amount ?? 0)} za prodej`,
+                          })),
+                          { value: OWN, label: "Vlastní částka pro tento obchod" },
+                        ]}
+                        placeholder="Vyberte…"
+                      />
+                    </div>
+                    {ownAmount && (
+                      <div className="space-y-1.5">
+                        <Label>Provize za tento obchod</Label>
+                        <Controller control={control} name="commissionAmount" render={({ field }) => (
+                          <FormCurrencyInput value={field.value as number | null | undefined} onChange={field.onChange} placeholder="např. 1 500" />
+                        )} />
+                      </div>
+                    )}
+                    {commissionPreview != null && (
+                      <p className="sm:col-span-2 text-xs text-muted-foreground">
+                        Po vyhrání obchodu se ambasadorovi zapíše provize <strong className="text-foreground">{formatCurrency(commissionPreview)}</strong>
+                        {!ownAmount && term?.percent != null && <> ({term.percent} % z {formatCurrency(Number(value) || 0)})</>} jako „k výplatě“.
+                      </p>
+                    )}
+                    {ambassador.terms.length === 0 && !ownAmount && (
+                      <p className="sm:col-span-2 text-xs text-amber-600">
+                        {ambassador.name} nemá nastavenou provizi (procenta, nebo pevnou částku „při každém prodeji“). Zvol vlastní částku, nebo ji nastav u ambasadora.{" "}
+                        <Link href={`/crm/ambassadors/${ambassador.id}`} className="underline">Otevřít ambasadora</Link>
                       </p>
                     )}
                   </div>
-                )}
-                {ambassador && ambassador.terms.length === 0 && (
-                  <p className="col-span-2 text-xs text-amber-600">
-                    {ambassador.name} nemá nastavenou procentní provizi. Přidej ji u ambasadora (Co mu platíme → Procenta), jinak se provize nezapíše.{" "}
-                    <Link href={`/crm/ambassadors/${ambassador.id}`} className="underline">Otevřít ambasadora</Link>
-                  </p>
                 )}
               </>
             )}
