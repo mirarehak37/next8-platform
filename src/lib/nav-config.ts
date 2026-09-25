@@ -30,6 +30,14 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Marketing",
+    items: [
+      { label: "Přehled", href: "/marketing", icon: "Megaphone", resource: "marketing" },
+      { label: "Obsah a posty", href: "/marketing/content", icon: "Clapperboard", resource: "marketing" },
+      { label: "Kampaně", href: "/marketing/campaigns", icon: "Target", resource: "marketing" },
+    ],
+  },
+  {
     label: "Partnerství",
     items: [
       { label: "Ambasadoři", href: "/crm/ambassadors", icon: "Star", resource: "ambassador" },

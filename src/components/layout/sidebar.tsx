@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Building2, Users, UserPlus, Handshake, Activity, Package, FileText,
   CheckSquare, Calendar, BarChart3, UserCog, ShieldCheck, UsersRound, LayoutGrid,
-  SlidersHorizontal, Workflow, History, LockKeyhole, Map, Upload, Star, HeartHandshake, Clapperboard, Tent, type LucideIcon,
+  SlidersHorizontal, Workflow, History, LockKeyhole, Map, Upload, Star, HeartHandshake, Clapperboard, Tent, Megaphone, Target, type LucideIcon,
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, Building2, Users, UserPlus, Handshake, Activity, Package, FileText,
   CheckSquare, Calendar, BarChart3, UserCog, ShieldCheck, UsersRound, LayoutGrid,
-  SlidersHorizontal, Workflow, History, Map, Upload, Star, HeartHandshake, Clapperboard, Tent,
+  SlidersHorizontal, Workflow, History, Map, Upload, Star, HeartHandshake, Clapperboard, Tent, Megaphone, Target,
 };
 
 export function Sidebar({

@@ -5,6 +5,9 @@ import { PageHeader } from "@/components/page-header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { PipelineFunnelChart, TrendChart, LeadSourceChart } from "@/components/dashboard/charts";
 import { MyTasksWidget, ActivityFeedWidget, TopPerformersWidget, StaleDealsWidget } from "@/components/dashboard/list-widgets";
+import { WeekAgenda } from "@/components/dashboard/week-agenda";
+import { allowedKinds, loadCalendarEntries } from "@/lib/calendar-items";
+import { toPragueWallClock } from "@/lib/marketing";
 import { formatCurrencyCompact } from "@/lib/format";
 import {
   Wallet, TrendingUp, UserPlus, Handshake, Trophy, Percent, Target, Clock,
@@ -76,6 +79,12 @@ export default async function DashboardPage() {
     }),
     prisma.activity.groupBy({ by: ["subjectId"], where: { tenantId: user.tenantId, subjectType: "deal" }, _max: { activityAt: true } }),
   ]);
+
+  const agendaToday = toPragueWallClock(now);
+  agendaToday.setHours(0, 0, 0, 0);
+  const agenda = await loadCalendarEntries(user, new Date(now.getTime() - 2 * 86400000), new Date(now.getTime() + 8 * 86400000), {
+    kinds: allowedKinds(user.role),
+  });
 
   const openValue = openDeals.reduce((s, d) => s + d.value, 0);
   const expectedRevenue = openDeals.reduce((s, d) => s + (d.value * (d.probability ?? d.stage.probability)) / 100, 0);
@@ -157,6 +166,8 @@ export default async function DashboardPage() {
           <KpiCard label="Průměrná hodnota obchodu" value={formatCurrencyCompact(avgDealValue)} icon={Target} />
           <KpiCard label="Průměrná délka cyklu" value={`${avgCycleDays} dní`} icon={Clock} />
         </div>
+
+        <WeekAgenda entries={agenda} today={agendaToday} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">

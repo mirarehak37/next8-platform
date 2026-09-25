@@ -15,12 +15,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FormSelect } from "@/components/form-select";
 import { FormCurrencyInput } from "@/components/form-currency-input";
+import { FormCombobox } from "@/components/form-combobox";
 import { Plus, Pencil } from "lucide-react";
 import { LEAD_STATUSES, LEAD_RATINGS, LEAD_SOURCES } from "@/lib/constants";
 
 type Owner = { id: string; name: string };
 
-export function LeadFormDialog({ owners, lead, trigger }: { owners: Owner[]; lead?: (LeadInput & { id: string }) | null; trigger?: React.ReactElement }) {
+export function LeadFormDialog({
+  owners,
+  lead,
+  trigger,
+  campaigns = [],
+}: {
+  owners: Owner[];
+  lead?: (LeadInput & { id: string }) | null;
+  trigger?: React.ReactElement;
+  // Marketing campaigns (value = utm_campaign) so leads get attributed consistently.
+  campaigns?: { value: string; label: string; hint?: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const isEdit = !!lead;
@@ -92,7 +104,9 @@ export function LeadFormDialog({ owners, lead, trigger }: { owners: Owner[]; lea
             </div>
             <div className="space-y-1.5">
               <Label>Kampaň</Label>
-              <Input {...register("campaign")} />
+              <Controller control={control} name="campaign" render={({ field }) => (
+                <FormCombobox value={field.value} onChange={field.onChange} options={campaigns} placeholder="Bez kampaně" allowClear creatable />
+              )} />
             </div>
             <div className="space-y-1.5">
               <Label>Stav</Label>

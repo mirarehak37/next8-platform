@@ -17,6 +17,7 @@ export type ModuleResource =
   | "ambassador"
   | "partner"
   | "event"
+  | "marketing"
   | "admin";
 
 export type PermissionAction = "view" | "create" | "edit" | "delete" | "export" | "approve" | "admin";
@@ -56,6 +57,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     ambassador: { actions: ALL_ACTIONS, scope: "all" },
     partner: { actions: ALL_ACTIONS, scope: "all" },
     event: { actions: ALL_ACTIONS, scope: "all" },
+    marketing: { actions: ALL_ACTIONS, scope: "all" },
   },
   Management: {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -72,6 +74,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     ambassador: { actions: EDIT_ACTIONS, scope: "all" },
     partner: { actions: EDIT_ACTIONS, scope: "all" },
     event: { actions: EDIT_ACTIONS, scope: "all" },
+    marketing: { actions: [...EDIT_ACTIONS, "approve"], scope: "all" },
   },
   "Sales Manager": {
     dashboard: { actions: VIEW_ONLY, scope: "team" },
@@ -87,6 +90,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     roadmap: { actions: ["view", "create"], scope: "all" },
     partner: { actions: VIEW_ONLY, scope: "all" },
     event: { actions: EDIT_ACTIONS, scope: "all" },
+    marketing: { actions: VIEW_ONLY, scope: "all" },
   },
   Sales: {
     dashboard: { actions: VIEW_ONLY, scope: "own" },
@@ -102,6 +106,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     roadmap: { actions: ["view", "create"], scope: "all" },
     partner: { actions: VIEW_ONLY, scope: "all" },
     event: { actions: EDIT_ACTIONS, scope: "all" },
+    marketing: { actions: VIEW_ONLY, scope: "all" },
   },
   Marketing: {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -115,6 +120,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     ambassador: { actions: EDIT_ACTIONS, scope: "all" },
     partner: { actions: EDIT_ACTIONS, scope: "all" },
     event: { actions: EDIT_ACTIONS, scope: "all" },
+    marketing: { actions: [...EDIT_ACTIONS, "delete", "approve"], scope: "all" },
   },
   Finance: {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -128,6 +134,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     ambassador: { actions: ["view", "export"], scope: "all" },
     partner: { actions: ["view", "export"], scope: "all" },
     event: { actions: EDIT_ACTIONS, scope: "all" },
+    marketing: { actions: VIEW_ONLY, scope: "all" },
   },
   Support: {
     dashboard: { actions: VIEW_ONLY, scope: "own" },
@@ -137,6 +144,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     task: { actions: EDIT_ACTIONS, scope: "own" },
     roadmap: { actions: ["view", "create"], scope: "all" },
     event: { actions: EDIT_ACTIONS, scope: "all" },
+    marketing: { actions: VIEW_ONLY, scope: "all" },
   },
   "Read Only": {
     dashboard: { actions: VIEW_ONLY, scope: "all" },
@@ -153,6 +161,7 @@ export const ROLE_MATRIX: RoleMatrix = {
     ambassador: { actions: VIEW_ONLY, scope: "all" },
     partner: { actions: VIEW_ONLY, scope: "all" },
     event: { actions: VIEW_ONLY, scope: "all" },
+    marketing: { actions: VIEW_ONLY, scope: "all" },
   },
 };
 

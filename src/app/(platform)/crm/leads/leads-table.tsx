@@ -34,9 +34,11 @@ export function LeadsTable({
   owners,
   pipelineId,
   firstStageId,
+  campaigns,
 }: {
   data: LeadRow[];
   owners: { id: string; name: string }[];
+  campaigns: { value: string; label: string; hint?: string }[];
   pipelineId: string;
   firstStageId: string;
 }) {
@@ -83,6 +85,7 @@ export function LeadsTable({
             )}
             <LeadFormDialog
               owners={owners}
+              campaigns={campaigns}
               lead={{
                 id: row.original.id,
                 firstName: row.original.firstName,
@@ -105,7 +108,7 @@ export function LeadsTable({
         ),
       },
     ],
-    [owners, pipelineId, firstStageId],
+    [owners, pipelineId, firstStageId, campaigns],
   );
 
   return (
@@ -116,7 +119,7 @@ export function LeadsTable({
       exportFilename="leady"
       emptyMessage="Zatím žádné leady."
       facets={[{ columnId: "status", title: "Stav", options: LEAD_STATUSES.map((s) => ({ value: s.value, label: s.label })) }]}
-      toolbarActions={<LeadFormDialog owners={owners} />}
+      toolbarActions={<LeadFormDialog owners={owners} campaigns={campaigns} />}
     />
   );
 }
