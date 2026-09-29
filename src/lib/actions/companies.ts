@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePermission, logAudit, ActionError } from "@/lib/actions/helpers";
+import { requirePermission, logAudit, ActionError, onlyProvided } from "@/lib/actions/helpers";
 import { companySchema } from "@/lib/validations/crm";
 import { revalidatePath } from "next/cache";
 
@@ -10,7 +10,7 @@ export async function createCompany(data: unknown) {
   const parsed = companySchema.parse(data);
 
   const company = await prisma.company.create({
-    data: { ...parsed, tenantId: user.tenantId },
+    data: { ...parsed, region: parsed.region || null, tenantId: user.tenantId },
   });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "company", entityId: company.id, action: "create" });
   revalidatePath("/crm/companies");
@@ -19,15 +19,16 @@ export async function createCompany(data: unknown) {
 
 export async function updateCompany(id: string, data: unknown) {
   const user = await requirePermission("company", "edit");
-  const parsed = companySchema.partial().parse(data);
+  const parsed = onlyProvided(companySchema.partial().parse(data), data);
 
   const existing = await prisma.company.findFirst({ where: { id, tenantId: user.tenantId } });
   if (!existing) throw new ActionError("Klub nenalezen.");
 
-  const company = await prisma.company.update({ where: { id }, data: parsed });
+  const company = await prisma.company.update({ where: { id }, data: { ...parsed, ...("region" in parsed ? { region: parsed.region || null } : {}) } });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "company", entityId: id, action: "update", changes: parsed });
   revalidatePath("/crm/companies");
   revalidatePath(`/crm/companies/${id}`);
+  revalidatePath("/crm/market");
   return company;
 }
 

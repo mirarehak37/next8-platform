@@ -521,6 +521,7 @@ model Company {
   billingCity        String?
   billingZip         String?
   billingCountry     String   @default("Česká republika")
+  region             String? // kraj (KRAJE code); null = derived from city/PSČ
   shippingStreet     String?
   shippingCity       String?
   shippingZip        String?
