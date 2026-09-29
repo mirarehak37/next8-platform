@@ -18,6 +18,7 @@ export const companySchema = z.object({
   billingStreet: z.string().optional().nullable(),
   billingCity: z.string().optional().nullable(),
   billingZip: z.string().optional().nullable(),
+  region: z.string().optional().nullable(),
   source: z.string().optional().nullable(),
   ownerId: z.string().min(1, "Vlastník je povinný"),
   description: z.string().optional().nullable(),

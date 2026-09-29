@@ -13,6 +13,7 @@ import { ClubTeamFormDialog, ClubTeamEditTrigger } from "@/components/crm/club-t
 import { ClubTeamContacts } from "@/components/crm/club-team-contacts";
 import { ClubTeamDeleteButton } from "@/components/crm/club-team-delete-button";
 import { ActivityFormDialog } from "@/components/crm/activity-form-dialog";
+import { krajLabel, resolvePlace } from "@/lib/regions";
 import { TaskFormDialog } from "@/components/crm/task-form-dialog";
 import {
   Building2, Globe, Phone, Mail, MapPin, Users, Handshake, FileText, CheckSquare, History, Plus, Shield,
@@ -60,6 +61,10 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
     prisma.taggedItem.findMany({ where: { entityType: "company", entityId: id }, include: { tag: true } }),
     prisma.contact.findMany({ where: { tenantId: user.tenantId }, select: { id: true, firstName: true, lastName: true }, orderBy: { firstName: "asc" } }),
   ]);
+  const place = resolvePlace({
+    region: company.region, city: company.billingCity, zip: company.billingZip,
+    leagues: [company.league, ...company.clubTeams.map((t) => t.league)],
+  });
   const contactOptions = allContacts.map((c) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }));
 
   const statusMeta = findMeta(COMPANY_STATUSES, company.status);
@@ -93,6 +98,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
               billingStreet: company.billingStreet,
               billingCity: company.billingCity,
               billingZip: company.billingZip,
+              region: company.region,
               source: company.source,
               ownerId: company.ownerId,
               description: company.description,
@@ -185,6 +191,15 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
                 <div><div className="text-muted-foreground text-xs mb-1">Roční obrat</div>{company.annualRevenue ? formatCurrency(company.annualRevenue) : "—"}</div>
                 <div><div className="text-muted-foreground text-xs mb-1">Počet členů</div>{company.employeeCount ?? "—"}</div>
                 <div className="col-span-2"><div className="text-muted-foreground text-xs mb-1">Adresa</div>{[company.billingStreet, company.billingCity, company.billingZip].filter(Boolean).join(", ") || "—"}</div>
+                <div className="col-span-2">
+                  <div className="text-muted-foreground text-xs mb-1">Kraj</div>
+                  {place.region ? (
+                    <Link href={`/crm/market?region=${place.region}`} className="hover:underline">
+                      {krajLabel(place.region)}
+                      {!company.region && <span className="text-xs text-muted-foreground"> (podle města{place.guessed ? ", nejisté – upravte v klubu" : ""})</span>}
+                    </Link>
+                  ) : "—"}
+                </div>
                 <div className="col-span-2"><div className="text-muted-foreground text-xs mb-1">Poznámka</div>{company.description ?? "—"}</div>
               </CardContent>
             </Card>

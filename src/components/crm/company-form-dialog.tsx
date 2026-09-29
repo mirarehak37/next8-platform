@@ -18,6 +18,9 @@ import {
 import { FormSelect } from "@/components/form-select";
 import { FormCombobox } from "@/components/form-combobox";
 import { Plus, Pencil } from "lucide-react";
+import { KRAJE } from "@/lib/kraje";
+
+const AUTO_REGION = "auto";
 import { COMPANY_STATUSES, COMPANY_SIZE_BANDS, LEAD_SOURCES, INDUSTRIES, SPORTS } from "@/lib/constants";
 
 type Owner = { id: string; name: string };
@@ -178,6 +181,20 @@ export function CompanyFormDialog({
             <div className="space-y-1.5">
               <Label>PSČ</Label>
               <Input {...register("billingZip")} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Kraj</Label>
+              <Controller
+                control={control}
+                name="region"
+                render={({ field }) => (
+                  <FormSelect
+                    value={field.value || AUTO_REGION}
+                    onChange={(v) => field.onChange(v === AUTO_REGION ? null : v)}
+                    options={[{ value: AUTO_REGION, label: "Automaticky podle města / PSČ" }, ...KRAJE.map((k) => ({ value: k.code, label: k.label }))]}
+                  />
+                )}
+              />
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Vlastník *</Label>
