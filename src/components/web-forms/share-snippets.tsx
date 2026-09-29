@@ -12,8 +12,10 @@ export function ShareSnippets({ formId }: { formId: string }) {
   const origin = useSyncExternalStore(() => () => {}, () => window.location.origin, () => "");
   const url = `${origin}/f/${formId}`;
   const bio = `${url}?utm_source=instagram&utm_medium=bio`;
-  const embed = `<iframe id="next8-form" src="${url}?embed=1" style="width:100%;height:760px;border:0" title="NEXT8 poptávka"></iframe>
-<script>(function(){var f=document.getElementById("next8-form");var q=location.search.slice(1);if(q)f.src+="&"+q;})();</script>`;
+  const frameId = `next8-form-${formId}`;
+  // Forwards the host page's ?utm_… to the form and resizes the frame to the form's height.
+  const embed = `<iframe id="${frameId}" src="${url}?embed=1" style="width:100%;height:760px;border:0" title="NEXT8 formulář"></iframe>
+<script>(function(){var f=document.getElementById("${frameId}");var q=location.search.slice(1);if(q)f.src+="&"+q;window.addEventListener("message",function(e){var d=e.data;if(e.origin==="${origin}"&&d&&d.type==="next8-form-height"&&d.formId==="${formId}")f.style.height=(d.height+4)+"px";});})();</script>`;
 
   const copy = async (text: string, what: string) => {
     await navigator.clipboard.writeText(text);

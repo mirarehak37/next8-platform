@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -17,11 +17,13 @@ import { FormSelect } from "@/components/form-select";
 import { FormCombobox } from "@/components/form-combobox";
 import { Section, Field } from "@/components/partnerships/form-parts";
 import { Plus, Trash2 } from "lucide-react";
+import { WEB_FORM_TYPES, webFormType } from "@/lib/web-form-types";
 
 export function WebFormDialog({
   form,
   owners,
   campaigns,
+  events,
   currentUserId,
   canDelete,
   trigger,
@@ -29,18 +31,21 @@ export function WebFormDialog({
   form?: (WebFormInput & { id: string }) | null;
   owners: { id: string; name: string }[];
   campaigns: { value: string; label: string }[];
+  events: { id: string; name: string }[];
   currentUserId: string;
   canDelete?: boolean;
   trigger?: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const blank = (): WebFormInput => ({ name: "", source: "Web – formulář", ownerId: currentUserId, isActive: true });
+  const blank = (): WebFormInput => ({ name: "", type: "demo", source: WEB_FORM_TYPES[0].source, ownerId: currentUserId, isActive: true });
   const initial = () => (form ? { ...form } : blank());
-  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting } } = useForm<WebFormInput>({
+  const { register, handleSubmit, control, reset, setValue, getValues, formState: { errors, isSubmitting } } = useForm<WebFormInput>({
     resolver: zodResolver(webFormSchema),
     defaultValues: initial(),
   });
+  const type = useWatch({ control, name: "type" });
+  const meta = webFormType(type);
 
   async function onSubmit(values: WebFormInput) {
     try {
@@ -69,33 +74,60 @@ export function WebFormDialog({
         <DialogHeader><DialogTitle>{form ? "Upravit formulář" : "Nový webový formulář"}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <Section title="Formulář">
+            <Field label="Typ formuláře">
+              <Controller control={control} name="type" render={({ field }) => (
+                <FormSelect
+                  value={field.value}
+                  onChange={(v) => {
+                    // Keep the lead source in step with the type unless someone typed their own.
+                    if (WEB_FORM_TYPES.some((t) => t.source === getValues("source"))) setValue("source", webFormType(v).source);
+                    field.onChange(v);
+                  }}
+                  options={WEB_FORM_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                />
+              )} />
+            </Field>
+            <Field label="Kam se uloží">
+              <div className="h-9 flex items-center text-sm text-muted-foreground">{meta.target}</div>
+            </Field>
+            {type === "event" && (
+              <Field label="Akce *" className="sm:col-span-2">
+                <Controller control={control} name="eventId" render={({ field }) => (
+                  <FormCombobox value={field.value} onChange={field.onChange} options={events.map((e) => ({ value: e.id, label: e.name }))} placeholder="Vyberte akci / kemp" />
+                )} />
+              </Field>
+            )}
             <Field label="Interní název *" error={errors.name?.message} className="sm:col-span-2">
               <Input placeholder="např. Web – demo pro trenéry" {...register("name")} />
             </Field>
             <Field label="Nadpis na stránce" className="sm:col-span-2">
-              <Input placeholder="Vyzkoušej NEXT8 se svým týmem" {...register("headline")} />
+              <Input placeholder={meta.headline} {...register("headline")} />
             </Field>
             <Field label="Úvodní text" className="sm:col-span-2">
-              <Textarea rows={2} placeholder="Nech nám kontakt, ozveme se do 24 hodin…" {...register("intro")} />
+              <Textarea rows={2} placeholder={meta.intro} {...register("intro")} />
             </Field>
             <Field label="Poděkování po odeslání" className="sm:col-span-2">
-              <Textarea rows={2} placeholder="Ozveme se ti do 24 hodin." {...register("thankYou")} />
+              <Textarea rows={2} placeholder={meta.thankYou} {...register("thankYou")} />
             </Field>
           </Section>
-          <Section title="Kam leady padají">
-            <Field label="Přidělit obchodníkovi *" error={errors.ownerId?.message}>
+          <Section title="Kdo to vyřizuje">
+            <Field label="Přidělit uživateli *" error={errors.ownerId?.message}>
               <Controller control={control} name="ownerId" render={({ field }) => (
                 <FormSelect value={field.value} onChange={field.onChange} options={owners.map((o) => ({ value: o.id, label: o.name }))} />
               )} />
             </Field>
-            <Field label="Zdroj leadu">
-              <Input {...register("source")} />
-            </Field>
-            <Field label="Výchozí kampaň" className="sm:col-span-2">
-              <Controller control={control} name="campaign" render={({ field }) => (
-                <FormCombobox value={field.value} onChange={field.onChange} options={campaigns} placeholder="Podle utm_campaign v odkazu" allowClear creatable />
-              )} />
-            </Field>
+            {(type === "demo" || type === "contact") && (
+              <>
+                <Field label="Zdroj leadu">
+                  <Input {...register("source")} />
+                </Field>
+                <Field label="Výchozí kampaň" className="sm:col-span-2">
+                  <Controller control={control} name="campaign" render={({ field }) => (
+                    <FormCombobox value={field.value} onChange={field.onChange} options={campaigns} placeholder="Podle utm_campaign v odkazu" allowClear creatable />
+                  )} />
+                </Field>
+              </>
+            )}
             <Field label="Aktivní">
               <Controller control={control} name="isActive" render={({ field }) => (
                 <Switch checked={!!field.value} onCheckedChange={(v: boolean) => field.onChange(v)} />

@@ -1125,6 +1125,7 @@ model Event {
   owner         User                @relation("EventOwner", fields: [ownerId], references: [id])
   company       Company?            @relation(fields: [companyId], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
+  webForms      WebForm[]
 
   @@index([tenantId, startDate])
 }
@@ -1230,21 +1231,26 @@ model MarketingPost {
 
 // Public lead-capture form (/f/<id>): embeddable on the web or linked from an Instagram bio.
 model WebForm {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  headline  String?
-  intro     String?
-  thankYou  String?
-  source    String   @default("Web – formulář")
-  campaign  String? // default utm_campaign when the visitor brings none
-  ownerId   String // new leads are assigned to this user
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String    @id @default(cuid())
+  tenantId        String
+  name            String
+  type            String    @default("demo") // demo | contact | event | ambassador | partner — decides fields and where it lands
+  eventId         String? // type "event": registrations go to this event
+  headline        String?
+  intro           String?
+  thankYou        String?
+  submissions     Int       @default(0)
+  lastSubmittedAt DateTime?
+  source          String    @default("Web – formulář")
+  campaign        String? // default utm_campaign when the visitor brings none
+  ownerId         String // new leads are assigned to this user
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   owner  User   @relation("WebFormOwner", fields: [ownerId], references: [id])
+  event  Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
   leads  Lead[]
 
   @@index([tenantId])

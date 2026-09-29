@@ -20,9 +20,9 @@ export async function getFollowUpSettings(tenantId: string): Promise<FollowUpSet
 
 const DAY = 86400000;
 // Due dates are date-only (UTC midnight), like tasks created in the form.
-const dueIn = (days: number, from = todayDateOnly()) => new Date(from.getTime() + Math.max(0, days) * DAY);
+export const dueIn = (days: number, from = todayDateOnly()) => new Date(from.getTime() + Math.max(0, days) * DAY);
 
-async function createTaskOnce(data: {
+export async function createTaskOnce(data: {
   tenantId: string; title: string; description?: string; assigneeId: string; creatorId: string; dueDate: Date;
   priority?: string; subjectType: string; subjectId: string;
 }) {
