@@ -12,6 +12,8 @@ import { CompanyFormDialog, CompanyEditTrigger } from "@/components/crm/company-
 import { ClubTeamFormDialog, ClubTeamEditTrigger } from "@/components/crm/club-team-form-dialog";
 import { ClubTeamContacts } from "@/components/crm/club-team-contacts";
 import { ClubTeamDeleteButton } from "@/components/crm/club-team-delete-button";
+import { ActivityFormDialog } from "@/components/crm/activity-form-dialog";
+import { TaskFormDialog } from "@/components/crm/task-form-dialog";
 import {
   Building2, Globe, Phone, Mail, MapPin, Users, Handshake, FileText, CheckSquare, History, Plus, Shield,
 } from "lucide-react";
@@ -43,7 +45,8 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
       take: 30,
     }),
     prisma.task.findMany({
-      where: { tenantId: user.tenantId, subjectType: "company", subjectId: id },
+      // The club's own tasks plus those of its deals (same as the activity feed above).
+      where: { tenantId: user.tenantId, OR: [{ subjectType: "company", subjectId: id }, { subjectType: "deal", subjectId: { in: company.deals.map((d) => d.id) } }] },
       include: { assignee: { select: { name: true } } },
       orderBy: { dueDate: "asc" },
     }),
@@ -267,6 +270,15 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           </TabsContent>
 
           <TabsContent value="activities" className="pt-4 space-y-2">
+            <div className="flex justify-end">
+              <ActivityFormDialog
+                companies={[{ id: company.id, name: company.name }]}
+                deals={company.deals.map((d) => ({ id: d.id, name: d.name }))}
+                defaultSubjectType="company"
+                defaultSubjectId={company.id}
+                trigger={<Button size="sm" variant="outline"><Plus className="h-4 w-4" /> Aktivita</Button>}
+              />
+            </div>
             {activities.length === 0 && <EmptyState text="Zatím žádné aktivity." />}
             {activities.map((a) => {
               const meta = findMeta(ACTIVITY_TYPES, a.type);
@@ -311,6 +323,14 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           </TabsContent>
 
           <TabsContent value="tasks" className="pt-4 space-y-2">
+            <div className="flex justify-end">
+              <TaskFormDialog
+                assignees={owners}
+                defaultSubjectType="company"
+                defaultSubjectId={company.id}
+                trigger={<Button size="sm" variant="outline"><Plus className="h-4 w-4" /> Úkol</Button>}
+              />
+            </div>
             {tasks.length === 0 && <EmptyState text="Zatím žádné úkoly." />}
             {tasks.map((t) => {
               const meta = findMeta(TASK_STATUSES, t.status);

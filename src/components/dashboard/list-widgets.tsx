@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/status-badge";
-import { formatCurrency, formatDate, initials } from "@/lib/format";
+import { formatCurrency, formatDate, initials, todayDateOnly } from "@/lib/format";
 import { findMeta, TASK_PRIORITIES, ACTIVITY_TYPES } from "@/lib/constants";
 import { Phone, Mail, Users, Video, StickyNote, Presentation, CircleDot, type LucideIcon } from "lucide-react";
 
@@ -19,7 +19,7 @@ export function MyTasksWidget({
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Moje dnešní úkoly</CardTitle>
-        <CardDescription>{tasks.length} úkolů k vyřízení dnes</CardDescription>
+        <CardDescription>{tasks.length} úkolů k vyřízení dnes a po termínu</CardDescription>
       </CardHeader>
       <CardContent className="space-y-1">
         {tasks.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">Na dnešek nemáte žádné úkoly. 🎉</p>}
@@ -28,10 +28,13 @@ export function MyTasksWidget({
           return (
             <Link
               key={task.id}
-              href="/tasks"
+              href="/tasks?filter=mine"
               className="flex items-center justify-between gap-2 rounded-md px-2 py-2 -mx-2 hover:bg-muted/60 transition-colors"
             >
-              <span className="text-sm truncate">{task.title}</span>
+              <span className="text-sm truncate">
+                {task.dueDate && task.dueDate < todayDateOnly() && <span className="text-rose-600 font-medium">⚠ {formatDate(task.dueDate)} · </span>}
+                {task.title}
+              </span>
               {prio && <StatusBadge label={prio.label} color={prio.color} />}
             </Link>
           );

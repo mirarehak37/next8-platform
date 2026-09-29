@@ -19,7 +19,22 @@ import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/constants";
 
 type Option = { id: string; name: string };
 
-export function TaskFormDialog({ assignees, task, trigger }: { assignees: Option[]; task?: (TaskInput & { id: string }) | null; trigger?: React.ReactElement }) {
+export function TaskFormDialog({
+  assignees,
+  task,
+  trigger,
+  defaultSubjectType,
+  defaultSubjectId,
+  defaultAssigneeId,
+}: {
+  assignees: Option[];
+  task?: (TaskInput & { id: string }) | null;
+  trigger?: React.ReactElement;
+  // Created from a club / deal detail → the task stays linked to it.
+  defaultSubjectType?: string;
+  defaultSubjectId?: string;
+  defaultAssigneeId?: string;
+}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const isEdit = !!task;
@@ -28,7 +43,10 @@ export function TaskFormDialog({ assignees, task, trigger }: { assignees: Option
     register, handleSubmit, control, formState: { errors, isSubmitting }, reset,
   } = useForm<TaskInput>({
     resolver: zodResolver(taskSchema),
-    defaultValues: task ?? { title: "", assigneeId: assignees[0]?.id ?? "", priority: "medium", status: "open" },
+    defaultValues: task ?? {
+      title: "", assigneeId: defaultAssigneeId ?? assignees[0]?.id ?? "", priority: "medium", status: "open",
+      subjectType: defaultSubjectType, subjectId: defaultSubjectId,
+    },
   });
 
   async function onSubmit(data: TaskInput) {

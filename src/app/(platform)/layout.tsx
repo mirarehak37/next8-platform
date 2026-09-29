@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { redirect } from "next/navigation";
+import { todayDateOnly } from "@/lib/format";
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -20,7 +21,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
         tenantId: session.user.tenantId,
         assigneeId: session.user.id,
         status: { in: ["open", "in_progress"] },
-        dueDate: { lt: new Date() },
+        dueDate: { lt: todayDateOnly() },
       },
     }),
   ]);

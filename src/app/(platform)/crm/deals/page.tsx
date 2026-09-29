@@ -31,8 +31,11 @@ export default async function DealsPage() {
 
   const stages: KanbanStage[] = pipeline.stages.map((s) => ({ id: s.id, name: s.name, probability: s.probability, isWon: s.isWon, isLost: s.isLost }));
 
+  // Every deal of the pipeline has a column — won/lost ones sit in the Vyhráno/Prohráno
+  // columns instead of vanishing from the board once they close.
+  const stageIds = new Set(stages.map((st) => st.id));
   const kanbanDeals: KanbanDeal[] = deals
-    .filter((d) => d.status === "open")
+    .filter((d) => stageIds.has(d.stageId))
     .map((d) => ({
       id: d.id,
       name: d.name,
@@ -57,13 +60,14 @@ export default async function DealsPage() {
     ownerName: d.owner.name,
   }));
 
-  const openValue = kanbanDeals.reduce((s, d) => s + d.value, 0);
+  const openDeals = deals.filter((d) => d.status === "open");
+  const openValue = openDeals.reduce((s, d) => s + d.value, 0);
 
   return (
     <div>
       <PageHeader
         title="Obchodní případy"
-        description={`${kanbanDeals.length} otevřených obchodů v hodnotě ${new Intl.NumberFormat("cs-CZ").format(openValue)} Kč`}
+        description={`${openDeals.length} otevřených obchodů v hodnotě ${new Intl.NumberFormat("cs-CZ").format(openValue)} Kč`}
         breadcrumbs={[{ label: "CRM" }, { label: "Obchodní případy" }]}
         actions={<DealFormDialog extras={extras} owners={owners} companies={companies} contacts={contactOptions} stages={stages} pipelineId={pipeline.id} />}
       />

@@ -1,3 +1,5 @@
+import { APP_TZ } from "@/lib/format";
+
 // Pure helpers for the Marketing module.
 
 export type PostMetrics = {
@@ -56,21 +58,11 @@ export function toDateTimeInput(d: Date | null | undefined) {
 }
 
 // Posts are scheduled to the minute; show them in Czech time even when the server runs in UTC.
-export const MARKETING_TZ = "Europe/Prague";
+export { APP_TZ as MARKETING_TZ, toAppWallClock as toPragueWallClock } from "@/lib/format";
 
 export function formatPostTime(d: Date | string | null | undefined, withYear = false) {
   if (!d) return "—";
   return new Intl.DateTimeFormat("cs-CZ", {
-    timeZone: MARKETING_TZ, weekday: "short", day: "numeric", month: "numeric", ...(withYear ? { year: "numeric" } : {}), hour: "2-digit", minute: "2-digit",
+    timeZone: APP_TZ, weekday: "short", day: "numeric", month: "numeric", ...(withYear ? { year: "numeric" } : {}), hour: "2-digit", minute: "2-digit",
   }).format(new Date(d));
-}
-
-// Same instant expressed as a Date whose local fields match Prague wall-clock (for day bucketing on the server).
-export function toPragueWallClock(d: Date) {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", { timeZone: MARKETING_TZ, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", hourCycle: "h23" })
-      .formatToParts(d)
-      .map((p) => [p.type, p.value]),
-  );
-  return new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute));
 }

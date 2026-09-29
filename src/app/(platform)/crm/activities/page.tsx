@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ActivityFormDialog } from "@/components/crm/activity-form-dialog";
 import { ACTIVITY_TYPES, findMeta } from "@/lib/constants";
-import { formatDateTime, initials } from "@/lib/format";
+import { APP_TZ, formatDateTime, initials } from "@/lib/format";
 import { Phone, Mail, Users, Video, StickyNote, Presentation, CircleDot, type LucideIcon } from "lucide-react";
 
 const ACTIVITY_ICONS: Record<string, LucideIcon> = {
@@ -31,7 +31,7 @@ export default async function ActivitiesPage() {
 
   const grouped = new Map<string, typeof activities>();
   for (const a of activities) {
-    const key = new Date(a.activityAt).toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long" });
+    const key = new Date(a.activityAt).toLocaleDateString("cs-CZ", { timeZone: APP_TZ, weekday: "long", day: "numeric", month: "long" });
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(a);
   }

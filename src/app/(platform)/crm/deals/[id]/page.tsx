@@ -8,10 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DealFormDialog, DealEditTrigger } from "@/components/crm/deal-form-dialog";
+import { ActivityFormDialog } from "@/components/crm/activity-form-dialog";
+import { TaskFormDialog } from "@/components/crm/task-form-dialog";
+import { Button } from "@/components/ui/button";
 import { loadDealFormExtras } from "@/lib/deal-form-extras";
-import { Building2, Handshake, FileText, Package } from "lucide-react";
-import { DEAL_STATUSES, findMeta, ACTIVITY_TYPES } from "@/lib/constants";
-import { formatCurrency, formatDate, formatDateTime, initials } from "@/lib/format";
+import { Building2, Handshake, FileText, Package, CheckSquare, Plus } from "lucide-react";
+import { DEAL_STATUSES, findMeta, ACTIVITY_TYPES, TASK_STATUSES } from "@/lib/constants";
+import { formatCurrency, formatDate, formatDateTime, initials, todayDateOnly } from "@/lib/format";
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,11 +39,16 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   });
   if (!deal) notFound();
 
-  const [activities, owners, companies, contacts, extras, commission] = await Promise.all([
+  const [activities, tasks, owners, companies, contacts, extras, commission] = await Promise.all([
     prisma.activity.findMany({
       where: { tenantId: user.tenantId, subjectType: "deal", subjectId: id },
       include: { owner: { select: { name: true } } },
       orderBy: { activityAt: "desc" },
+    }),
+    prisma.task.findMany({
+      where: { tenantId: user.tenantId, subjectType: "deal", subjectId: id },
+      include: { assignee: { select: { name: true } } },
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }],
     }),
     prisma.user.findMany({ where: { tenantId: user.tenantId, status: "active" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -205,6 +213,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             <TabsTrigger value="products">Produkty ({deal.products.length})</TabsTrigger>
             <TabsTrigger value="quotes">Nabídky ({deal.quotes.length})</TabsTrigger>
             <TabsTrigger value="activities">Aktivity ({activities.length})</TabsTrigger>
+            <TabsTrigger value="tasks">Úkoly ({tasks.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="pt-4 space-y-2">
@@ -243,6 +252,15 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           </TabsContent>
 
           <TabsContent value="activities" className="pt-4 space-y-2">
+            <div className="flex justify-end">
+              <ActivityFormDialog
+                companies={companies}
+                deals={[{ id: deal.id, name: deal.name }]}
+                defaultSubjectType="deal"
+                defaultSubjectId={deal.id}
+                trigger={<Button size="sm" variant="outline"><Plus className="h-4 w-4" /> Aktivita</Button>}
+              />
+            </div>
             {activities.length === 0 && <EmptyState text="Zatím žádné aktivity." />}
             {activities.map((a) => {
               const meta = findMeta(ACTIVITY_TYPES, a.type);
@@ -256,6 +274,37 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                       <p className="text-sm">{a.subject}</p>
                       <p className="text-xs text-muted-foreground mt-1">{a.owner.name} · {formatDateTime(a.activityAt)}</p>
                     </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </TabsContent>
+
+          <TabsContent value="tasks" className="pt-4 space-y-2">
+            <div className="flex justify-end">
+              <TaskFormDialog
+                assignees={owners}
+                defaultSubjectType="deal"
+                defaultSubjectId={deal.id}
+                defaultAssigneeId={deal.ownerId}
+                trigger={<Button size="sm" variant="outline"><Plus className="h-4 w-4" /> Úkol</Button>}
+              />
+            </div>
+            {tasks.length === 0 && <EmptyState text="Zatím žádné úkoly." />}
+            {tasks.map((t) => {
+              const meta = findMeta(TASK_STATUSES, t.status);
+              const late = !!t.dueDate && t.dueDate < todayDateOnly() && t.status !== "done" && t.status !== "cancelled";
+              return (
+                <Card key={t.id}>
+                  <CardContent className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm font-medium">{t.title}</div>
+                        <div className={`text-xs ${late ? "text-rose-600" : "text-muted-foreground"}`}>{t.assignee.name}{t.dueDate && ` · ${formatDate(t.dueDate)}`}</div>
+                      </div>
+                    </div>
+                    {meta && <StatusBadge label={meta.label} color={meta.color} />}
                   </CardContent>
                 </Card>
               );
