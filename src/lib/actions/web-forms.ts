@@ -3,8 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission, logAudit, ActionError, onlyProvided } from "@/lib/actions/helpers";
 import { submissionSchemas, webFormSchema } from "@/lib/validations/web-forms";
-import { createTaskOnce, dueIn, onLeadCreated } from "@/lib/follow-ups";
-import { AMBASSADOR_SOURCE, MARKETING_AUDIENCES } from "@/lib/constants";
+import { createTaskOnce, dueIn } from "@/lib/follow-ups";
+import { ROLE_INTEREST, ROLE_TITLE, findClub, leadFrom, splitName, utmNote, type Form, type Result } from "@/lib/web-form-intake";
+import { MARKETING_AUDIENCES } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
 import { WEB_FORM_TYPES } from "@/lib/web-form-types";
 
@@ -48,50 +49,6 @@ export async function deleteWebForm(id: string) {
   await prisma.webForm.delete({ where: { id } });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "webForm", entityId: id, action: "delete" });
   revalidatePath("/marketing/forms");
-}
-
-const ROLE_INTEREST: Record<string, string> = { player: "PRO ATHLETE", parent: "PRO ATHLETE", coach: "TEAM", club: "TEAM" };
-const ROLE_TITLE: Record<string, string> = { player: "Hráč", parent: "Rodič", coach: "Trenér", club: "Zástupce klubu" };
-
-type Result = { ok: true } | { ok: false; error: string };
-type Form = NonNullable<Awaited<ReturnType<typeof prisma.webForm.findFirst>>>;
-type Utm = { utmSource?: string | null; utmMedium?: string | null; utmCampaign?: string | null; utmContent?: string | null; ref?: string | null };
-
-function splitName(full: string) {
-  const [first, ...rest] = full.trim().split(/\s+/);
-  return { firstName: first, lastName: rest.join(" ") };
-}
-const utmNote = (d: Utm) =>
-  [
-    (d.utmSource || d.utmMedium || d.utmContent) && `UTM: ${[d.utmSource, d.utmMedium, d.utmContent].filter(Boolean).join(" / ")}`,
-    d.ref && `Doporučení (ref): ${d.ref}`,
-  ].filter(Boolean);
-
-// Club typed by the visitor → existing club record when the name matches exactly.
-async function findClub(tenantId: string, club: string | null | undefined) {
-  if (!club) return null;
-  const c = await prisma.company.findFirst({ where: { tenantId, name: { equals: club.trim(), mode: "insensitive" } }, select: { id: true } });
-  return c?.id ?? null;
-}
-
-async function leadFrom(form: Form, data: {
-  firstName: string; lastName: string | null; email: string; phone?: string | null; companyName?: string | null; jobTitle?: string | null;
-  productInterest?: string | null; notes: string; utm: Utm;
-}) {
-  const { utm, ...rest } = data;
-  const lead = await prisma.lead.create({
-    data: {
-      ...rest,
-      tenantId: form.tenantId,
-      source: utm.ref ? AMBASSADOR_SOURCE : form.source,
-      campaign: utm.utmCampaign || form.campaign || null,
-      status: "new",
-      ownerId: form.ownerId,
-      webFormId: form.id,
-    },
-  });
-  await onLeadCreated(form.tenantId, lead, form.ownerId);
-  revalidatePath("/crm/leads");
 }
 
 // Public, unauthenticated: called from /f/<id>. Returns a result instead of throwing so the
