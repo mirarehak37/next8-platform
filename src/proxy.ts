@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
+  // Public lead forms (/f/<id>) are for visitors — never redirect them to login, logged in or not.
+  if (req.nextUrl.pathname.startsWith("/f/")) return NextResponse.next();
   const isPublicPage = req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/setup");
 
   if (!isLoggedIn && !isPublicPage) {

@@ -60,6 +60,8 @@ model Tenant {
 
   marketingCampaigns MarketingCampaign[]
   marketingPosts     MarketingPost[]
+  webForms           WebForm[]
+  followUpRules      FollowUpRule[]
 }
 
 model User {
@@ -102,6 +104,7 @@ model User {
   ownedEvents          Event[]                  @relation("EventOwner")
   ownedCampaigns       MarketingCampaign[]      @relation("CampaignOwner")
   ownedPosts           MarketingPost[]          @relation("PostOwner")
+  ownedWebForms        WebForm[]                @relation("WebFormOwner")
 
   comments      Comment[]
   attachments   Attachment[]
@@ -666,6 +669,7 @@ model Lead {
   convertedCompanyId String?
   convertedContactId String?
   convertedDealId    String?
+  webFormId          String? // lead came from this public web form
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -673,6 +677,7 @@ model Lead {
   owner   User     @relation("LeadOwner", fields: [ownerId], references: [id])
   company Company? @relation(fields: [convertedCompanyId], references: [id])
   contact Contact? @relation(fields: [convertedContactId], references: [id])
+  webForm WebForm? @relation(fields: [webFormId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status])
 }
@@ -1120,6 +1125,7 @@ model Event {
   owner         User                @relation("EventOwner", fields: [ownerId], references: [id])
   company       Company?            @relation(fields: [companyId], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
+  webForms      WebForm[]
 
   @@index([tenantId, startDate])
 }
@@ -1221,4 +1227,45 @@ model MarketingPost {
 
   @@index([tenantId, status])
   @@index([tenantId, scheduledAt])
+}
+
+// Public lead-capture form (/f/<id>): embeddable on the web or linked from an Instagram bio.
+model WebForm {
+  id              String    @id @default(cuid())
+  tenantId        String
+  name            String
+  type            String    @default("demo") // demo | contact | event | ambassador | partner — decides fields and where it lands
+  eventId         String? // type "event": registrations go to this event
+  headline        String?
+  intro           String?
+  thankYou        String?
+  submissions     Int       @default(0)
+  lastSubmittedAt DateTime?
+  source          String    @default("Web – formulář")
+  campaign        String? // default utm_campaign when the visitor brings none
+  ownerId         String // new leads are assigned to this user
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner  User   @relation("WebFormOwner", fields: [ownerId], references: [id])
+  event  Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  leads  Lead[]
+
+  @@index([tenantId])
+}
+
+// Built-in follow-up automations (see src/lib/follow-ups.ts); a missing row means defaults.
+model FollowUpRule {
+  id        String   @id @default(cuid())
+  tenantId  String
+  key       String // lead_call | deal_onboarding | deal_renewal
+  isActive  Boolean  @default(true)
+  config    Json?
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
 }

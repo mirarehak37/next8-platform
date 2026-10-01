@@ -4,6 +4,9 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { Workflow, ArrowRight } from "lucide-react";
+import { FollowUpSettingsCard } from "@/components/admin/follow-up-settings";
+import { getFollowUpSettings } from "@/lib/follow-ups";
+import { can } from "@/lib/rbac";
 
 const TRIGGER_LABELS: Record<string, string> = {
   on_create: "Při vytvoření záznamu", on_update: "Při změně záznamu", on_status_change: "Při změně stavu/fáze",
@@ -17,6 +20,7 @@ export default async function AutomationPage() {
   const rules = await prisma.workflowRule.findMany({ where: { tenantId: user.tenantId }, orderBy: { createdAt: "desc" } });
   const creators = await prisma.user.findMany({ where: { id: { in: rules.map((r) => r.createdById) } }, select: { id: true, name: true } });
   const creatorNames = new Map(creators.map((c) => [c.id, c.name]));
+  const followUps = await getFollowUpSettings(user.tenantId);
 
   return (
     <div>
@@ -26,6 +30,7 @@ export default async function AutomationPage() {
         breadcrumbs={[{ label: "Administrace" }, { label: "Automatizace" }]}
       />
       <div className="p-6 space-y-4">
+        <FollowUpSettingsCard settings={followUps} canEdit={can(user.role, "admin", "edit")} />
         {rules.length === 0 && <p className="text-sm text-muted-foreground">Zatím žádná pravidla.</p>}
         {rules.map((rule) => {
           const trigger = JSON.parse(rule.triggerConfig);

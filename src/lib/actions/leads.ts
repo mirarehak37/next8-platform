@@ -1,7 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePermission, logAudit, ActionError } from "@/lib/actions/helpers";
+import { requirePermission, logAudit, ActionError, onlyProvided } from "@/lib/actions/helpers";
+import { onLeadCreated } from "@/lib/follow-ups";
 import { leadSchema } from "@/lib/validations/crm";
 import { revalidatePath } from "next/cache";
 
@@ -10,13 +11,15 @@ export async function createLead(data: unknown) {
   const parsed = leadSchema.parse(data);
   const lead = await prisma.lead.create({ data: { ...parsed, tenantId: user.tenantId } });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "lead", entityId: lead.id, action: "create" });
+  await onLeadCreated(user.tenantId, lead, user.id);
   revalidatePath("/crm/leads");
+  revalidatePath("/tasks");
   return lead;
 }
 
 export async function updateLead(id: string, data: unknown) {
   const user = await requirePermission("lead", "edit");
-  const parsed = leadSchema.partial().parse(data);
+  const parsed = onlyProvided(leadSchema.partial().parse(data), data);
   const existing = await prisma.lead.findFirst({ where: { id, tenantId: user.tenantId } });
   if (!existing) throw new ActionError("Lead nenalezen.");
   const lead = await prisma.lead.update({ where: { id }, data: parsed });

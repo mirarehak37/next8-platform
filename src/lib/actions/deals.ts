@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission, logAudit, ActionError, onlyProvided } from "@/lib/actions/helpers";
 import { dealSchema } from "@/lib/validations/crm";
 import { revalidatePath } from "next/cache";
+import { onDealWon } from "@/lib/follow-ups";
 import type { z } from "zod";
 import { syncDealCommission } from "@/lib/deal-commission";
 import { AMBASSADOR_SOURCE } from "@/lib/constants";
@@ -72,6 +73,7 @@ export async function createDeal(data: unknown) {
   });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "deal", entityId: deal.id, action: "create" });
   await syncDealCommission(user.tenantId, deal.id, user.id);
+  if (deal.status === "won") await onDealWon(user.tenantId, deal, user.id);
   revalidateDeal(deal.id, deal.ambassadorId);
   return deal;
 }
@@ -100,6 +102,7 @@ export async function updateDeal(id: string, data: unknown) {
   });
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "deal", entityId: id, action: "update", changes: parsed });
   await syncDealCommission(user.tenantId, id, user.id);
+  if (deal.status === "won" && existing.status !== "won") await onDealWon(user.tenantId, deal, user.id);
   revalidateDeal(id, deal.ambassadorId ?? existing.ambassadorId);
   return deal;
 }
@@ -127,6 +130,7 @@ export async function moveDealStage(id: string, stageId: string) {
 
   await logAudit({ tenantId: user.tenantId, userId: user.id, entityType: "deal", entityId: id, action: "status_change", changes: { stageId, status } });
   await syncDealCommission(user.tenantId, id, user.id);
+  if (status === "won" && existing.status !== "won") await onDealWon(user.tenantId, deal, user.id);
 
   if (stage.name === "Nabídka") {
     await prisma.task.create({
