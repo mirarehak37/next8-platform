@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, Bell, LogOut, Settings, Menu, AlarmClock, CalendarClock, ArrowRight, Building2, BookUser, KanbanSquare,
-  UserPlus, CornerDownLeft,
+  UserPlus, CornerDownLeft, Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
@@ -154,6 +154,9 @@ export function Topbar({
                   <Settings className="size-4" /> Nastavení účtu
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem render={<a href="/settings/claude" />}>
+                <Sparkles className="size-4" /> Připojení ke Claude
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSearchOpen(true)}>
                 <Search className="size-4" /> Hledat
                 <span className="ml-auto text-xs text-subtle">⌘K</span>

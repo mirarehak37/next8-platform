@@ -34,6 +34,7 @@ model Tenant {
   customFields    CustomFieldDefinition[]
   picklists       Picklist[]
   savedViews      SavedView[]
+  apiTokens       ApiToken[]
   workflowRules   WorkflowRule[]
   approvalFlows   ApprovalFlow[]
   numberSequences NumberSequence[]
@@ -115,6 +116,7 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
   savedViews    SavedView[]
+  apiTokens     ApiToken[]
 
   @@index([tenantId])
 }
@@ -1273,6 +1275,24 @@ model FollowUpRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, key])
+}
+
+// Personal access tokens for external clients (Claude via MCP). Only the SHA-256 hash is stored.
+model ApiToken {
+  id         String    @id @default(cuid())
+  tenantId   String
+  userId     String
+  name       String
+  tokenHash  String    @unique
+  prefix     String
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
 }
 
 // =========================================================================
