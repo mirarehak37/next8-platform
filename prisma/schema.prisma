@@ -62,6 +62,9 @@ model Tenant {
   marketingPosts     MarketingPost[]
   webForms           WebForm[]
   followUpRules      FollowUpRule[]
+
+  sequences           Sequence[]
+  sequenceEnrollments SequenceEnrollment[]
 }
 
 model User {
@@ -105,6 +108,7 @@ model User {
   ownedCampaigns       MarketingCampaign[]      @relation("CampaignOwner")
   ownedPosts           MarketingPost[]          @relation("PostOwner")
   ownedWebForms        WebForm[]                @relation("WebFormOwner")
+  ownedSequences       Sequence[]               @relation("SequenceOwner")
 
   comments      Comment[]
   attachments   Attachment[]
@@ -629,9 +633,10 @@ model Contact {
   quotes       Quote[]
   clubTeams    ClubTeamContact[]
 
-  ambassadorProfiles Ambassador[]
-  partnerContacts    Partner[]
-  eventRegistrations EventRegistration[]
+  ambassadorProfiles  Ambassador[]
+  partnerContacts     Partner[]
+  eventRegistrations  EventRegistration[]
+  sequenceEnrollments SequenceEnrollment[]
 
   @@index([tenantId, lastName])
 }
@@ -1268,4 +1273,59 @@ model FollowUpRule {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, key])
+}
+
+// =========================================================================
+// SEQUENCES — outreach cadences. No email provider: every step becomes a
+// Task for the sequence owner, due enrolledAt + dayOffset.
+// =========================================================================
+
+model Sequence {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  ownerId     String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner       User                 @relation("SequenceOwner", fields: [ownerId], references: [id])
+  steps       SequenceStep[]
+  enrollments SequenceEnrollment[]
+
+  @@index([tenantId])
+}
+
+model SequenceStep {
+  id         String  @id @default(cuid())
+  sequenceId String
+  order      Int
+  dayOffset  Int     @default(0)
+  type       String  @default("email") // email | call | task
+  title      String
+  body       String?
+
+  sequence Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@index([sequenceId, order])
+}
+
+model SequenceEnrollment {
+  id         String    @id @default(cuid())
+  tenantId   String
+  sequenceId String
+  contactId  String
+  status     String    @default("active") // active | replied | completed | stopped
+  enrolledAt DateTime  @default(now())
+  endedAt    DateTime?
+  taskIds    String[]
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sequence Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([sequenceId, contactId])
+  @@index([tenantId, status])
 }

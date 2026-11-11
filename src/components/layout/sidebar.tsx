@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Building2, BookUser, UserPlus, KanbanSquare, BarChart3, ListChecks, Package, FileText, Upload,
   CheckSquare, Calendar, ChartNoAxesColumn, AlertTriangle, Map, UserCog, ShieldCheck, UsersRound, LayoutGrid,
   SlidersHorizontal, Workflow, History, LockKeyhole, Users, LifeBuoy, ChevronRight, Star, HeartHandshake, Clapperboard, Tent,
-  Megaphone, Target, MapPinned, Inbox, type LucideIcon,
+  Megaphone, Target, MapPinned, Inbox, Mail, type LucideIcon,
 } from "lucide-react";
 import { NAV_GROUPS, PIPELINE_DOT_COLORS, isNavActive, type NavCountKey } from "@/lib/nav-config";
 import { can, type ModuleResource } from "@/lib/rbac";
@@ -19,7 +19,7 @@ import { clampSidebarWidth, SIDEBAR_WIDTH_STORAGE_KEY, SIDEBAR_WIDTH_VAR } from 
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, Building2, BookUser, UserPlus, KanbanSquare, BarChart3, ListChecks, Package, FileText, Upload,
   CheckSquare, Calendar, ChartNoAxesColumn, AlertTriangle, Map, UserCog, ShieldCheck, UsersRound, LayoutGrid,
-  SlidersHorizontal, Workflow, History, Star, HeartHandshake, Clapperboard, Tent, Megaphone, Target, MapPinned, Inbox,
+  SlidersHorizontal, Workflow, History, Star, HeartHandshake, Clapperboard, Tent, Megaphone, Target, MapPinned, Inbox, Mail,
 };
 
 export type SidebarData = {

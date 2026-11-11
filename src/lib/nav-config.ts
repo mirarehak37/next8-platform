@@ -27,6 +27,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Obchodní případy", href: "/crm/deals", icon: "KanbanSquare", resource: "deal", countKey: "openDeals" },
       { label: "Forecast", href: "/crm/forecast", icon: "BarChart3", resource: "deal" },
       { label: "Aktivity", href: "/crm/activities", icon: "ListChecks", resource: "activity" },
+      { label: "Emailové sekvence", href: "/crm/sequences", icon: "Mail", resource: "contact" },
     ],
   },
   {
