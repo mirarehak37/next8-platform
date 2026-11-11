@@ -9,7 +9,7 @@ export default function ImportPage() {
         description="Hromadně importujte kluby, kontakty, leady nebo produkty z Excelu, CSV nebo vloženého textu."
         breadcrumbs={[{ label: "CRM" }, { label: "Import dat" }]}
       />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <ImportWizard />
       </div>
     </div>

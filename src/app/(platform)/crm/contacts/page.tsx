@@ -38,7 +38,7 @@ export default async function ContactsPage() {
   return (
     <div>
       <PageHeader title="Kontakty" description={`${rows.length} kontaktních osob`} breadcrumbs={[{ label: "CRM" }, { label: "Kontakty" }]} />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <ContactsTable data={rows} owners={owners} companies={companies} />
       </div>
     </div>

@@ -28,7 +28,7 @@ export default async function UsersPage() {
         breadcrumbs={[{ label: "Administrace" }, { label: "Uživatelé" }]}
         actions={<InviteUserDialog roles={roles} />}
       />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="rounded-md border bg-background">
           <Table>
             <TableHeader>

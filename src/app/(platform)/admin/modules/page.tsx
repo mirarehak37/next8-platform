@@ -30,7 +30,7 @@ export default async function ModulesPage() {
         description="Aktivujte další aplikace pro digitalizaci firemních procesů — sdílí uživatele, oprávnění, dokumenty, úkoly i automatizace s CRM."
         breadcrumbs={[{ label: "Administrace" }, { label: "Moduly platformy" }]}
       />
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {tenantModules.map((tm) => {
           const Icon = MODULE_ICONS[tm.module.icon] ?? Package;
           return (

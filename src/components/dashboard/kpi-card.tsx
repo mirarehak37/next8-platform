@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { type LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
 
@@ -16,23 +15,19 @@ export function KpiCard({
   hint?: string;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-xs text-muted-foreground font-medium">{label}</div>
-          <div className="text-xl sm:text-2xl font-semibold tracking-tight mt-1 truncate">{value}</div>
-          {hint && <div className="text-xs text-muted-foreground mt-1">{hint}</div>}
-          {trend !== undefined && (
-            <div className={cn("flex items-center gap-1 text-xs mt-1.5 font-medium", trend >= 0 ? "text-emerald-600" : "text-rose-600")}>
-              {trend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-              {Math.abs(trend)}% oproti min. období
-            </div>
-          )}
-        </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FF1947]/10 text-[#FF1947] dark:bg-[#FF1947]/10">
-          <Icon className="h-4.5 w-4.5" />
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-3 rounded-lg bg-card p-4 outline-1 -outline-offset-1 outline-white/6">
+      <div className="flex items-start justify-between gap-2">
+        <span className="caption-style line-clamp-2 leading-tight text-subtle">{label}</span>
+        <Icon className="size-3.5 shrink-0 text-subtle" aria-hidden />
+      </div>
+      <span className="text-lg leading-none font-medium tabular-nums sm:text-[22px]">{value}</span>
+      {hint && <span className="caption-style leading-tight text-soft">{hint}</span>}
+      {trend !== undefined && (
+        <span className={cn("caption-style flex items-center gap-1", trend >= 0 ? "text-success" : "text-danger")}>
+          {trend >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+          {Math.abs(trend)}% oproti min. období
+        </span>
+      )}
+    </div>
   );
 }

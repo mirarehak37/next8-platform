@@ -26,7 +26,7 @@ export default async function ProductsPage() {
   return (
     <div>
       <PageHeader title="Produkty" description={`${rows.length} produktů a služeb v katalogu`} breadcrumbs={[{ label: "CRM" }, { label: "Produkty" }]} />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <ProductsTable data={rows} />
       </div>
     </div>

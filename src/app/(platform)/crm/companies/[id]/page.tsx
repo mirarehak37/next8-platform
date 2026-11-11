@@ -108,7 +108,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
         }
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <Card className="lg:col-span-3">
             <CardContent className="flex flex-wrap items-start gap-6">

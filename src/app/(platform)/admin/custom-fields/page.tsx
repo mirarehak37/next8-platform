@@ -22,7 +22,7 @@ export default async function CustomFieldsPage() {
         breadcrumbs={[{ label: "Administrace" }, { label: "Vlastní pole" }]}
         actions={<CustomFieldDialog />}
       />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="rounded-md border bg-background">
           <Table>
             <TableHeader>

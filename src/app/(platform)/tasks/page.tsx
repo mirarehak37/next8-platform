@@ -47,7 +47,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   return (
     <div>
       <PageHeader title="Úkoly" description={`${rows.length} úkolů celkem · ${overdueRows.length} po termínu`} breadcrumbs={[{ label: "Úkoly" }]} />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <Tabs defaultValue={["mine", "today", "week", "overdue", "kanban"].includes(filter ?? "") ? filter : "all"}>
           <TabsList>
             <TabsTrigger value="all">Vše ({rows.length})</TabsTrigger>

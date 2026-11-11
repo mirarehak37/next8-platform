@@ -8,11 +8,13 @@ import {
 } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { moveDealStage } from "@/lib/actions/deals";
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { CalendarDays } from "lucide-react";
 import { DealFormDialog } from "@/components/crm/deal-form-dialog";
 import type { DealFormExtras } from "@/lib/deal-form-extras";
-import { formatCurrency, initials } from "@/lib/format";
+import { Tag, stageTone } from "@/components/common/tag";
+import { CountBadge } from "@/components/common/count-badge";
+import { OwnerAvatar } from "@/components/common/owner-badge";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export type KanbanDeal = {
@@ -102,7 +104,11 @@ export function DealsKanban({
               {stageDeals.map((deal) => (
                 <KanbanCard key={deal.id} deal={deal} />
               ))}
-              {stageDeals.length === 0 && <div className="text-xs text-muted-foreground text-center py-6 border border-dashed rounded-md">Přetáhněte sem obchod</div>}
+              {stageDeals.length === 0 && (
+                <div className="caption-style flex h-20 items-center justify-center rounded-lg border border-dashed border-white/8 text-subtle">
+                  Přetáhněte sem obchod
+                </div>
+              )}
               <DealFormDialog
                 extras={extras}
                 owners={owners}
@@ -112,7 +118,7 @@ export function DealsKanban({
                 pipelineId={pipelineId}
                 defaultStageId={stage.id}
                 trigger={
-                  <button className="w-full text-xs text-muted-foreground hover:text-foreground border border-dashed rounded-md py-1.5 transition-colors">
+                  <button className="w-full rounded-lg py-1.5 text-xs text-subtle transition-colors hover:bg-white/4 hover:text-foreground">
                     + Přidat obchod
                   </button>
                 }
@@ -142,18 +148,20 @@ function KanbanColumn({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex w-72 shrink-0 flex-col rounded-lg border bg-muted/30 transition-colors",
-        isOver && "bg-[#FF1947]/10 border-[#FF1947] dark:bg-[#FF1947]/10",
+        "flex w-72 shrink-0 flex-col gap-3 rounded-xl bg-sidebar p-2 outline-1 -outline-offset-1 outline-white/4 transition-[outline-color] duration-150",
+        isOver && "outline-brand/70",
       )}
     >
-      <div className="px-3 py-2.5 border-b">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">{stage.name}</span>
-          <span className="text-xs text-muted-foreground">{count}</span>
-        </div>
-        <div className="text-xs text-muted-foreground mt-0.5">{formatCurrency(total)}</div>
+      <div className="flex items-center justify-between gap-2 px-1 pt-1">
+        <span className="flex min-w-0 items-center gap-2">
+          <Tag tone={stageTone(stage)} className="truncate">
+            {stage.name}
+          </Tag>
+          <CountBadge>{count}</CountBadge>
+        </span>
+        <span className="caption-style shrink-0 text-subtle tabular-nums">{formatCurrencyCompact(total)}</span>
       </div>
-      <div className="flex-1 space-y-2 p-2 min-h-[120px]">{children}</div>
+      <div className="flex min-h-[120px] flex-1 flex-col gap-2">{children}</div>
     </div>
   );
 }
@@ -162,26 +170,53 @@ function KanbanCard({ deal, dragging }: { deal: KanbanDeal; dragging?: boolean }
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggableCard(deal.id);
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
 
+  const slipping = isPastDue(deal.expectedCloseDate);
+
   return (
-    <Card
+    <div
       ref={setNodeRef}
       style={style}
       {...listeners}
       {...attributes}
-      className={cn("cursor-grab active:cursor-grabbing touch-none py-0 gap-0", (isDragging || dragging) && "opacity-60 shadow-lg")}
+      className={cn(
+        "flex cursor-grab touch-none flex-col gap-3 rounded-lg bg-card p-3 outline-1 -outline-offset-1 outline-white/6 transition-opacity duration-150 active:cursor-grabbing",
+        (isDragging || dragging) && "opacity-60 shadow-overlay",
+      )}
     >
-      <CardContent className="p-3 space-y-2">
-        <Link href={`/crm/deals/${deal.id}`} className="text-sm font-medium hover:underline block" onClick={(e) => isDragging && e.preventDefault()}>
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/crm/deals/${deal.id}`}
+          className="min-w-0 text-sm leading-tight font-medium hover:underline"
+          onClick={(e) => isDragging && e.preventDefault()}
+        >
           {deal.name}
         </Link>
-        {deal.companyName && <div className="text-xs text-muted-foreground">{deal.companyName}</div>}
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-sm font-semibold">{formatCurrency(deal.value, deal.currency)}</span>
-          <Avatar className="h-5 w-5"><AvatarFallback className="text-[9px]">{initials(deal.ownerName)}</AvatarFallback></Avatar>
-        </div>
-      </CardContent>
-    </Card>
+        {slipping && (
+          <span className="mt-1 size-1.5 shrink-0 rounded-full bg-danger" title="Po termínu uzavření">
+            <span className="sr-only">Po termínu uzavření</span>
+          </span>
+        )}
+      </div>
+      {deal.companyName && <div className="caption-style -mt-1 truncate text-soft">{deal.companyName}</div>}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm tabular-nums">{formatCurrency(deal.value, deal.currency)}</span>
+        {deal.expectedCloseDate && (
+          <span className={cn("caption-style flex items-center gap-1 tabular-nums", slipping ? "text-danger" : "text-soft")}>
+            <CalendarDays className="size-3" aria-hidden />
+            {new Date(deal.expectedCloseDate).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" })}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 border-t pt-3">
+        <OwnerAvatar name={deal.ownerName} className="size-4 text-[8px]" />
+        <span className="caption-style truncate text-soft">{deal.ownerName}</span>
+      </div>
+    </div>
   );
+}
+
+function isPastDue(iso: string | null) {
+  return iso ? new Date(iso).getTime() < Date.now() - 86_400_000 : false;
 }
 
 function useDraggableCard(id: string) {

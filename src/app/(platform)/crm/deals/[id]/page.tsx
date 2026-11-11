@@ -109,7 +109,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         }
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         {deal.status === "open" && (
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {stages.map((stage, i) => (

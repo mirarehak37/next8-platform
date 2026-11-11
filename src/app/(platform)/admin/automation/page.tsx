@@ -29,7 +29,7 @@ export default async function AutomationPage() {
         description="Obecný workflow engine platformy: TRIGGER → PODMÍNKA → AKCE. Konfigurace níže je uložena strukturovaně a stejný engine budou moci využívat i budoucí moduly (Faktury, Schvalování, HR…)."
         breadcrumbs={[{ label: "Administrace" }, { label: "Automatizace" }]}
       />
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <FollowUpSettingsCard settings={followUps} canEdit={can(user.role, "admin", "edit")} />
         {rules.length === 0 && <p className="text-sm text-muted-foreground">Zatím žádná pravidla.</p>}
         {rules.map((rule) => {

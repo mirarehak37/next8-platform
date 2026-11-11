@@ -18,7 +18,7 @@ export default async function TeamsPage() {
   return (
     <div>
       <PageHeader title="Týmy" description={`${teams.length} týmů`} breadcrumbs={[{ label: "Administrace" }, { label: "Týmy" }]} actions={<CreateTeamDialog />} />
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         {teams.map((team) => {
           const memberIds = new Set(team.members.map((m) => m.userId));
           const candidates = allUsers.filter((u) => !memberIds.has(u.id));

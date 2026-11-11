@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Unbounded, Montserrat } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { SIDEBAR_WIDTH_SCRIPT } from "@/lib/sidebar";
 
-const unbounded = Unbounded({
-  variable: "--font-heading",
-  subsets: ["latin", "latin-ext"],
-  weight: ["500", "600", "700", "800"],
-});
-
-const montserrat = Montserrat({
+const geist = Geist({
   variable: "--font-sans",
   subsets: ["latin", "latin-ext"],
 });
@@ -22,14 +17,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="cs"
-      className={`${unbounded.variable} ${montserrat.variable} h-full antialiased`}
-    >
+    <html lang="cs" className={`dark ${geist.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_WIDTH_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
         <TooltipProvider delay={200}>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster theme="dark" position="top-right" />
         </TooltipProvider>
       </body>
     </html>

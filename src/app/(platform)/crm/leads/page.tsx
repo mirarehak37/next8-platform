@@ -41,7 +41,7 @@ export default async function LeadsPage() {
   return (
     <div>
       <PageHeader title="Leady" description={`${rows.length} leadů v procesu kvalifikace`} breadcrumbs={[{ label: "CRM" }, { label: "Leady" }]} />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <LeadsTable data={rows} owners={owners} pipelineId={pipeline?.id ?? ""} firstStageId={firstStage?.id ?? ""} campaigns={campaignOptions} />
       </div>
     </div>

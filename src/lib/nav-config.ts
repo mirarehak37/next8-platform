@@ -1,30 +1,37 @@
 import type { ModuleResource } from "@/lib/rbac";
 
+export type NavCountKey = "companies" | "contacts" | "leads" | "openDeals" | "myTasks" | "slipping";
+
 export type NavItem = {
   label: string;
   href: string;
   icon: string;
   resource?: ModuleResource;
+  countKey?: NavCountKey;
 };
 
 export type NavGroup = {
   label?: string;
+  collapsible?: boolean;
   items: NavItem[];
 };
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    items: [{ label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", resource: "dashboard" }],
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: "LayoutDashboard", resource: "dashboard" },
+      { label: "Kluby", href: "/crm/companies", icon: "Building2", resource: "company", countKey: "companies" },
+      { label: "Mapa trhu", href: "/crm/market", icon: "MapPinned", resource: "company" },
+      { label: "Kontakty", href: "/crm/contacts", icon: "BookUser", resource: "contact", countKey: "contacts" },
+      { label: "Leady", href: "/crm/leads", icon: "UserPlus", resource: "lead", countKey: "leads" },
+      { label: "Obchodní případy", href: "/crm/deals", icon: "KanbanSquare", resource: "deal", countKey: "openDeals" },
+      { label: "Forecast", href: "/crm/forecast", icon: "BarChart3", resource: "deal" },
+      { label: "Aktivity", href: "/crm/activities", icon: "ListChecks", resource: "activity" },
+    ],
   },
   {
-    label: "CRM",
+    label: "Obchod",
     items: [
-      { label: "Kluby", href: "/crm/companies", icon: "Building2", resource: "company" },
-      { label: "Mapa trhu", href: "/crm/market", icon: "MapPinned", resource: "company" },
-      { label: "Kontakty", href: "/crm/contacts", icon: "Users", resource: "contact" },
-      { label: "Leady", href: "/crm/leads", icon: "UserPlus", resource: "lead" },
-      { label: "Obchodní případy", href: "/crm/deals", icon: "Handshake", resource: "deal" },
-      { label: "Aktivity", href: "/crm/activities", icon: "Activity", resource: "activity" },
       { label: "Produkty", href: "/crm/products", icon: "Package", resource: "product" },
       { label: "Nabídky", href: "/crm/quotes", icon: "FileText", resource: "quote" },
       { label: "Import dat", href: "/crm/import", icon: "Upload", resource: "company" },
@@ -51,9 +58,15 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Práce",
     items: [
       { label: "Akce a kempy", href: "/events", icon: "Tent", resource: "event" },
-      { label: "Úkoly", href: "/tasks", icon: "CheckSquare", resource: "task" },
+      { label: "Úkoly", href: "/tasks", icon: "CheckSquare", resource: "task", countKey: "myTasks" },
       { label: "Kalendář", href: "/calendar", icon: "Calendar", resource: "task" },
-      { label: "Reporty", href: "/reports", icon: "BarChart3", resource: "report" },
+    ],
+  },
+  {
+    label: "Reporty",
+    items: [
+      { label: "Přehled reportů", href: "/reports", icon: "ChartNoAxesColumn", resource: "report" },
+      { label: "Ohrožené obchody", href: "/reports/slipping-deals", icon: "AlertTriangle", resource: "deal", countKey: "slipping" },
     ],
   },
   {
@@ -62,6 +75,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Administrace",
+    collapsible: true,
     items: [
       { label: "Uživatelé", href: "/admin/users", icon: "UserCog", resource: "admin" },
       { label: "Role a oprávnění", href: "/admin/roles", icon: "ShieldCheck", resource: "admin" },
@@ -84,3 +98,5 @@ export function isNavActive(pathname: string, href: string) {
   if (!matches(href)) return false;
   return !ALL_HREFS.some((other) => other.length > href.length && matches(other));
 }
+
+export const PIPELINE_DOT_COLORS = ["#fbbf24", "#f472b6", "#a78bfa", "#38bdf8", "#34d399", "#fb923c"];

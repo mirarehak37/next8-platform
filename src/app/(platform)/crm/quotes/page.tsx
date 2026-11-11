@@ -32,7 +32,7 @@ export default async function QuotesPage() {
   return (
     <div>
       <PageHeader title="Nabídky" description={`${rows.length} nabídek`} breadcrumbs={[{ label: "CRM" }, { label: "Nabídky" }]} />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <QuotesTable data={rows} companies={companies} deals={deals} products={products} contacts={contactOptions} />
       </div>
     </div>

@@ -15,7 +15,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     return (
       <div>
         <PageHeader title="Vyhledávání" breadcrumbs={[{ label: "Vyhledávání" }]} />
-        <div className="p-6 text-sm text-muted-foreground">Zadejte hledaný výraz do vyhledávacího pole nahoře.</div>
+        <div className="p-4 sm:p-6 text-sm text-muted-foreground">Zadejte hledaný výraz do vyhledávacího pole nahoře.</div>
       </div>
     );
   }
@@ -43,7 +43,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   return (
     <div>
       <PageHeader title={`Výsledky pro „${query}“`} description={`${totalResults} nalezených záznamů`} breadcrumbs={[{ label: "Vyhledávání" }]} />
-      <div className="p-6 space-y-4 max-w-2xl">
+      <div className="p-4 sm:p-6 space-y-4 max-w-2xl">
         {sections.length === 0 && <p className="text-sm text-muted-foreground">Nic nenalezeno. Zkuste jiný výraz.</p>}
         {sections.map((section) => (
           <Card key={section.title}>

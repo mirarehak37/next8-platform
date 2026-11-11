@@ -46,7 +46,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         breadcrumbs={[{ label: "Kalendář" }]}
         actions={<MonthNav basePath="/calendar" year={year} month={month} extraQuery={extra.toString()} />}
       />
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <Link
             href={query({ f: allowed })}

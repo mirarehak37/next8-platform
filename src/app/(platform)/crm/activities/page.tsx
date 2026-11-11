@@ -44,7 +44,7 @@ export default async function ActivitiesPage() {
         breadcrumbs={[{ label: "CRM" }, { label: "Aktivity" }]}
         actions={<ActivityFormDialog companies={companies} deals={deals} />}
       />
-      <div className="p-6 max-w-3xl space-y-8">
+      <div className="p-4 sm:p-6 max-w-3xl space-y-8">
         {activities.length === 0 && <p className="text-sm text-muted-foreground">Zatím žádné aktivity.</p>}
         {Array.from(grouped.entries()).map(([day, items]) => (
           <div key={day}>

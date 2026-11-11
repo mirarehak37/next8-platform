@@ -153,8 +153,8 @@ export default async function DashboardPage() {
     <div>
       <PageHeader title="Dashboard" description={`Vítejte zpět, ${user.name?.split(" ")[0]}. Zde je přehled vašeho obchodu.`} />
 
-      <div className="p-6 space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <KpiCard label="Hodnota otevřených obchodů" value={formatCurrencyCompact(openValue)} icon={Wallet} hint={`${openDeals.length} obchodů`} />
           <KpiCard label="Očekávané tržby (forecast)" value={formatCurrencyCompact(expectedRevenue)} icon={TrendingUp} />
           <KpiCard label="Nové leady (30 dní)" value={String(newLeads30)} icon={UserPlus} />
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
             activities={recentActivitiesRaw.map((a) => ({ id: a.id, type: a.type, subject: a.subject, ownerName: a.owner.name, activityAt: a.activityAt }))}
           />
           <TopPerformersWidget performers={topPerformers} />
-          <div className="rounded-lg border bg-background p-4">
+          <div className="rounded-lg bg-card p-4 outline-1 -outline-offset-1 outline-white/6">
             <h3 className="text-base font-semibold mb-1">Naplánované schůzky</h3>
             <p className="text-sm text-muted-foreground mb-3">Nejbližší nadcházející aktivity</p>
             <div className="space-y-2">

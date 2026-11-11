@@ -33,7 +33,7 @@ export default async function AuditLogPage() {
   return (
     <div>
       <PageHeader title="Audit log" description={`Posledních ${logs.length} změn v systému`} breadcrumbs={[{ label: "Administrace" }, { label: "Audit log" }]} />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="rounded-md border bg-background">
           <Table>
             <TableHeader>

@@ -41,7 +41,7 @@ export default async function CompaniesPage() {
         description={`${rows.length} klubů v databázi`}
         breadcrumbs={[{ label: "CRM" }, { label: "Kluby" }]}
       />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <CompaniesTable data={rows} owners={owners} />
       </div>
     </div>

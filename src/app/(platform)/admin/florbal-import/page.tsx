@@ -16,7 +16,7 @@ export default async function FlorbalImportPage() {
         description="Jednorázové importy dat pro florbalové kluby a výběry."
         breadcrumbs={[{ label: "Admin" }, { label: "Import klubů" }]}
       />
-      <div className="p-6 max-w-lg space-y-6">
+      <div className="p-4 sm:p-6 max-w-lg space-y-6">
         <ClubExportImport />
         <FlorbalImportButton />
         <TalentYouthImportButton />

@@ -53,7 +53,7 @@ export default async function RoadmapPage() {
         breadcrumbs={[{ label: "Roadmap" }]}
         actions={<RoadmapFormDialog owners={owners} modules={modules} parentCandidates={parentCandidates} />}
       />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <Tabs defaultValue="kanban">
           <TabsList>
             <TabsTrigger value="kanban"><KanbanSquare className="h-3.5 w-3.5" /> Kanban</TabsTrigger>

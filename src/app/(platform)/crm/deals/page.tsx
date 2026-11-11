@@ -7,16 +7,25 @@ import { DealFormDialog } from "@/components/crm/deal-form-dialog";
 import { DealsKanban, type KanbanDeal, type KanbanStage } from "./deals-kanban";
 import { DealsTable, type DealRow } from "./deals-table";
 import { loadDealFormExtras } from "@/lib/deal-form-extras";
+import { FilterMenu } from "@/components/common/filter-menu";
 
-export default async function DealsPage() {
+export default async function DealsPage({ searchParams }: { searchParams: Promise<{ pipeline?: string; owner?: string }> }) {
+  const { pipeline: pipelineParam, owner: ownerParam } = await searchParams;
   const session = await auth();
   const user = session!.user;
 
   const scope = await ownerScopeWhere(user, "deal");
   const [pipeline, deals, owners, companies, contacts, extras] = await Promise.all([
-    prisma.pipeline.findFirst({ where: { tenantId: user.tenantId, isDefault: true }, include: { stages: { orderBy: { order: "asc" } } } }),
+    prisma.pipeline.findFirst({
+      where: pipelineParam ? { tenantId: user.tenantId, id: pipelineParam } : { tenantId: user.tenantId, isDefault: true },
+      include: { stages: { orderBy: { order: "asc" } } },
+    }),
     prisma.deal.findMany({
-      where: scope,
+      where: {
+        ...scope,
+        ...(ownerParam ? { AND: [{ ownerId: ownerParam }] } : {}),
+        ...(pipelineParam ? { pipelineId: pipelineParam } : { pipeline: { isDefault: true } }),
+      },
       include: { stage: true, company: { select: { name: true } }, owner: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
@@ -60,18 +69,24 @@ export default async function DealsPage() {
     ownerName: d.owner.name,
   }));
 
+  const ownerOptions = [{ value: "all", label: "Všichni" }, ...owners.map((o) => ({ value: o.id, label: o.name }))];
   const openDeals = deals.filter((d) => d.status === "open");
   const openValue = openDeals.reduce((s, d) => s + d.value, 0);
 
   return (
     <div>
       <PageHeader
-        title="Obchodní případy"
+        title={pipelineParam ? pipeline.name : "Obchodní případy"}
         description={`${openDeals.length} otevřených obchodů v hodnotě ${new Intl.NumberFormat("cs-CZ").format(openValue)} Kč`}
-        breadcrumbs={[{ label: "CRM" }, { label: "Obchodní případy" }]}
-        actions={<DealFormDialog extras={extras} owners={owners} companies={companies} contacts={contactOptions} stages={stages} pipelineId={pipeline.id} />}
+        breadcrumbs={[{ label: "CRM" }, { label: "Obchodní případy", href: pipelineParam ? "/crm/deals" : undefined }, ...(pipelineParam ? [{ label: pipeline.name }] : [])]}
+        actions={
+          <>
+            <FilterMenu label="Vlastník" param="owner" value={ownerParam ?? "all"} options={ownerOptions} align="end" />
+            <DealFormDialog extras={extras} owners={owners} companies={companies} contacts={contactOptions} stages={stages} pipelineId={pipeline.id} />
+          </>
+        }
       />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <Tabs defaultValue="kanban">
           <TabsList>
             <TabsTrigger value="kanban">Kanban</TabsTrigger>

@@ -27,7 +27,7 @@ export default async function RolesPage() {
   return (
     <div>
       <PageHeader title="Role a oprávnění" description="RBAC model: Zobrazit | Vytvořit | Upravit | Smazat | Exportovat | Schválit | Administrovat" breadcrumbs={[{ label: "Administrace" }, { label: "Role" }]} />
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {roles.map((r) => (
             <Card key={r.id}>

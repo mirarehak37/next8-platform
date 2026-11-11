@@ -83,7 +83,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   return (
     <div>
       <PageHeader title="Reporty" description={`Obchodní výkonnost za ${periodLabel}`} breadcrumbs={[{ label: "Reporty" }]} />
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6">
         <div className="flex gap-2">
           {[
             { value: "30", label: "30 dní" },

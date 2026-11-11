@@ -30,7 +30,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         breadcrumbs={[{ label: "CRM" }, { label: "Nabídky", href: "/crm/quotes" }, { label: quote.number }]}
         actions={<QuoteStatusControl quoteId={quote.id} status={quote.status} />}
       />
-      <div className="p-6 max-w-3xl">
+      <div className="p-4 sm:p-6 max-w-3xl">
         <Card>
           <CardContent className="space-y-6 p-8">
             <div className="flex items-start justify-between">
