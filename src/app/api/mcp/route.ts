@@ -4,11 +4,14 @@ import { callTool, toolDefinitions, ToolError } from "@/lib/mcp/tools";
 export const dynamic = "force-dynamic";
 
 const SUPPORTED_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
-const SERVER_INFO = { name: "next8-crm", title: "NEXT8 CRM", version: "1.0.0" };
+const SERVER_INFO = { name: "next8-crm", title: "NEXT8 CRM", version: "2.0.0" };
 const INSTRUCTIONS =
-  "NEXT8 CRM pro sportovní kluby. Kluby = firmy (company), pod nimi týmy a kontakty. " +
-  "Nejdřív použijte search_crm pro nalezení ID, pak get_company / list_deals. Částky jsou v CZK. " +
-  "Zápisové nástroje (create_task, log_activity, create_lead) zapisují jménem uživatele, kterému patří token.";
+  "NEXT8 CRM pro sportovní kluby. Kluby = firmy (company), pod nimi týmy (club_team) a kontakty. Částky jsou v CZK. " +
+  "Rychlé čtení: search_crm, pipeline_summary, list_slipping_deals, list_my_tasks. " +
+  "Vše ostatní přes obecné nástroje: describe_entity (typy záznamů, pole, číselníky) → list_records / get_record → " +
+  "create_record / update_record / set_status / delete_record. Obchody: list_pipelines, move_deal_stage. Leady: convert_lead. " +
+  "Před zápisem si ověřte ID přes hledání; mazání jen na výslovný pokyn. " +
+  "Všechny zápisy běží jménem uživatele, kterému patří token, s jeho oprávněními.";
 
 type JsonRpcRequest = { jsonrpc: "2.0"; id?: string | number | null; method: string; params?: Record<string, unknown> };
 

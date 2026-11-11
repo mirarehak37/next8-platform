@@ -7,20 +7,12 @@ import { loadSlippingDeals, quarterOf, quarterRange } from "@/lib/deal-insights"
 import { logAudit } from "@/lib/actions/helpers";
 import type { TokenUser } from "@/lib/api-tokens";
 
-export class ToolError extends Error {}
+import { runAsUser } from "@/lib/acting-user";
+import { ActionError } from "@/lib/actions/helpers";
+import { tool, ToolError } from "./core";
+import { RECORD_TOOLS } from "./record-tools";
 
-type Tool<S extends z.ZodType> = {
-  name: string;
-  title: string;
-  description: string;
-  input: S;
-  readOnly: boolean;
-  run: (user: TokenUser, args: z.infer<S>) => Promise<unknown>;
-};
-
-function tool<S extends z.ZodType>(t: Tool<S>) {
-  return t;
-}
+export { ToolError };
 
 function require(user: TokenUser, resource: ModuleResource, action: PermissionAction = "view") {
   if (!can(user.role, resource, action)) throw new ToolError(`Role ${user.role} nemá oprávnění (${resource}:${action}).`);
@@ -45,7 +37,7 @@ async function assertSubject(user: TokenUser, type?: string | null, id?: string 
   if (!found) throw new ToolError(`Záznam ${type} ${id} neexistuje.`);
 }
 
-export const TOOLS = [
+const CORE_TOOLS = [
   tool({
     name: "search_crm",
     title: "Hledat v CRM",
@@ -394,18 +386,32 @@ export const TOOLS = [
   }),
 ];
 
+export const TOOLS = [...CORE_TOOLS, ...RECORD_TOOLS];
+
 export function toolDefinitions() {
   return TOOLS.map((t) => {
-    const inputSchema = z.toJSONSchema(t.input, { io: "input" }) as Record<string, unknown>;
+    const inputSchema = z.toJSONSchema(t.input, { io: "input", unrepresentable: "any" }) as Record<string, unknown>;
     delete inputSchema.$schema;
+    const destructive = "destructive" in t && t.destructive === true;
     return {
       name: t.name,
       title: t.title,
       description: t.description,
       inputSchema,
-      annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: false, openWorldHint: false },
+      annotations: { title: t.title, readOnlyHint: t.readOnly, destructiveHint: destructive, openWorldHint: false },
     };
   });
+}
+
+function toToolError(e: unknown): unknown {
+  if (e instanceof ToolError) return e;
+  if (e instanceof ActionError) return new ToolError(e.message);
+  if (e instanceof z.ZodError) return new ToolError(`Neplatná data: ${z.prettifyError(e)}`);
+  const code = (e as { code?: string })?.code;
+  if (code === "P2002") return new ToolError("Záznam s touto unikátní hodnotou už existuje.");
+  if (code === "P2003") return new ToolError("Odkazovaný záznam neexistuje (zkontrolujte ID), nebo na mazaný záznam odkazují jiná data.");
+  if (code === "P2025") return new ToolError("Záznam nenalezen.");
+  return e;
 }
 
 export async function callTool(user: TokenUser, name: string, rawArgs: unknown) {
@@ -413,5 +419,10 @@ export async function callTool(user: TokenUser, name: string, rawArgs: unknown) 
   if (!t) throw new ToolError(`Neznámý nástroj: ${name}`);
   const parsed = t.input.safeParse(rawArgs ?? {});
   if (!parsed.success) throw new ToolError(`Neplatné parametry: ${z.prettifyError(parsed.error)}`);
-  return (t.run as (u: TokenUser, a: unknown) => Promise<unknown>)(user, parsed.data);
+  try {
+    // Server actions called by the tools resolve their user from this context instead of a cookie session.
+    return await runAsUser(user, () => (t.run as (u: TokenUser, a: unknown) => Promise<unknown>)(user, parsed.data));
+  } catch (e) {
+    throw toToolError(e);
+  }
 }

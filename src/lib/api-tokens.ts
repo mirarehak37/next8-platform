@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export const TOKEN_PREFIX = "n8_";
 
-export type TokenUser = { id: string; tenantId: string; role: string; name: string };
+export type TokenUser = { id: string; tenantId: string; role: string; name: string; email: string; jobTitle?: string };
 
 export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -33,5 +33,7 @@ export async function userFromBearer(header: string | null): Promise<TokenUser |
     tenantId: record.tenantId,
     role: record.user.userRoles[0]?.role.name ?? "Read Only",
     name: record.user.name,
+    email: record.user.email,
+    jobTitle: record.user.jobTitle ?? undefined,
   };
 }

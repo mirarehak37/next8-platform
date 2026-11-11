@@ -14,15 +14,14 @@ import { Tag } from "@/components/common/tag";
 type TokenRow = { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null };
 
 const TOOLS = [
-  ["search_crm", "hledání klubů, kontaktů, obchodů a leadů"],
-  ["get_company", "detail klubu s kontakty, týmy, obchody a aktivitami"],
-  ["list_deals", "seznam obchodů podle stavu"],
-  ["pipeline_summary", "pipeline po fázích a forecast čtvrtletí"],
-  ["list_slipping_deals", "ohrožené obchody"],
-  ["list_my_tasks", "moje úkoly"],
-  ["create_task", "vytvořit úkol"],
-  ["log_activity", "zapsat hovor, schůzku, poznámku…"],
-  ["create_lead", "založit lead"],
+  ["Přehledy", "hledání v CRM, pipeline a forecast, ohrožené obchody, moje úkoly"],
+  ["Čtení všeho", "kluby, týmy, kontakty, leady, obchody, úkoly, aktivity, produkty, nabídky, ambasadoři, partneři, akce, marketing, formuláře, roadmapa, sekvence"],
+  ["Zakládání a úpravy", "všechny výše uvedené typy záznamů – se stejnou validací jako v aplikaci"],
+  ["Obchody", "přesun mezi fázemi, uzavření jako vyhráno/prohráno, nabídky"],
+  ["Leady", "změna stavu a převod na klub + kontakt + obchod"],
+  ["Úkoly a aktivity", "vytvořit, dokončit, zapsat hovor nebo schůzku"],
+  ["Sekvence", "založit, zapsat kontakty, pozastavit, ukončit zápis"],
+  ["Mazání", "jen s výslovným potvrzením; správa uživatelů a rolí zůstává v aplikaci"],
 ];
 
 function CopyBlock({ label, value }: { label: string; value: string }) {
@@ -165,7 +164,7 @@ export function ClaudeConnect({ mcpUrl, tokens }: { mcpUrl: string; tokens: Toke
           <ul className="flex flex-col gap-2">
             {TOOLS.map(([tool, label]) => (
               <li key={tool} className="flex flex-col gap-0.5">
-                <code className="font-mono text-xs text-chip">{tool}</code>
+                <span className="text-xs font-medium text-chip">{tool}</span>
                 <span className="caption-style text-subtle">{label}</span>
               </li>
             ))}

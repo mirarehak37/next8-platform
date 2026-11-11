@@ -1,10 +1,13 @@
 import { auth } from "@/auth";
+import { actingUser } from "@/lib/acting-user";
 import { prisma } from "@/lib/prisma";
 import { can, type ModuleResource, type PermissionAction } from "@/lib/rbac";
 
 export class ActionError extends Error {}
 
 export async function requireSession() {
+  const acting = actingUser();
+  if (acting) return acting;
   const session = await auth();
   if (!session?.user) throw new ActionError("Nepřihlášeno.");
   return session.user;

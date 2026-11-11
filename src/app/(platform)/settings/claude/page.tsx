@@ -22,7 +22,7 @@ export default async function ClaudeSettingsPage() {
     <div>
       <PageHeader
         title="Připojení ke Claude"
-        description="Napojte CRM na Clauda přes MCP. Claude pak umí hledat kluby, číst obchody a forecast a zapisovat úkoly, aktivity a leady — s vašimi oprávněními."
+        description="Napojte CRM na Clauda přes MCP. Claude pak umí ovládat celé CRM — číst, zakládat a upravovat kluby, kontakty, obchody, úkoly, marketing i další moduly — s vašimi oprávněními."
         breadcrumbs={[{ label: "Nastavení" }, { label: "Připojení ke Claude" }]}
       />
       <ClaudeConnect
