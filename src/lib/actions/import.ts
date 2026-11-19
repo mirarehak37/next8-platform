@@ -121,6 +121,45 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
 
 const norm = (v: string | null | undefined) => (v ?? "").trim().toLowerCase();
 
+function splitTags(v: string | undefined) {
+  return (v ?? "")
+    .split(/[,;]/)
+    .map((t) => t.trim().replace(/\s+/g, " ").slice(0, 60))
+    .filter(Boolean);
+}
+
+function parseYesNo(v: string | undefined): boolean | undefined {
+  const s = norm(v);
+  if (!s) return undefined;
+  if (["ano", "yes", "true", "1", "y", "a"].includes(s)) return true;
+  if (["ne", "no", "false", "0", "n"].includes(s)) return false;
+  return undefined;
+}
+
+// Tags (created on first use) and, for contacts that already existed, consent + source.
+async function applyContactExtras(
+  tenantId: string,
+  extras: Map<string, { tags: string[]; consent?: boolean; source?: string }>,
+  newIds: Set<string>,
+) {
+  const tagNames = [...new Set([...extras.values()].flatMap((m) => m.tags))];
+  if (tagNames.length) {
+    await prisma.tag.createMany({ data: tagNames.map((name) => ({ tenantId, name })), skipDuplicates: true });
+    const tags = await prisma.tag.findMany({ where: { tenantId, name: { in: tagNames } }, select: { id: true, name: true } });
+    const tagId = new Map(tags.map((t) => [t.name, t.id]));
+    const links = [...extras.entries()].flatMap(([entityId, m]) =>
+      [...new Set(m.tags)].map((name) => ({ tagId: tagId.get(name)!, entityType: "contact", entityId })),
+    );
+    if (links.length) await prisma.taggedItem.createMany({ data: links, skipDuplicates: true });
+  }
+
+  const existing = [...extras.entries()].filter(([id]) => !newIds.has(id));
+  for (const consent of [true, false]) {
+    const ids = existing.filter(([, m]) => m.consent === consent).map(([id]) => id);
+    if (ids.length) await prisma.contact.updateMany({ where: { tenantId, id: { in: ids } }, data: { marketingConsent: consent } });
+  }
+}
+
 // Contacts: one row = one person (+ up to two extra people of the same club),
 // optionally tied to a club and a team. The same person appearing on several rows
 // (e.g. contact for 5 teams) becomes ONE contact linked to all of them — matched by
@@ -172,6 +211,8 @@ async function importContacts(user: { id: string; tenantId: string }, rows: Impo
   const newTeams: Prisma.ClubTeamCreateManyInput[] = [];
   const clubLinks: Prisma.CompanyContactCreateManyInput[] = [];
   const teamLinks: Prisma.ClubTeamContactCreateManyInput[] = [];
+  // Tags, consent and source belong to the row's main person.
+  const extrasById = new Map<string, { tags: string[]; consent?: boolean; source?: string }>();
 
   // Finds (by e-mail, else by name within the club) or queues one new person.
   function personId(p: { first: string; last: string; titleBefore?: string | null; titleAfter?: string | null; email?: string; phone?: string; mobile?: string }, companyId: string | null) {
@@ -236,6 +277,12 @@ async function importContacts(user: { id: string; tenantId: string }, rows: Impo
     );
     // Position: explicit Pozice column, else the role, else "team contact" for team rows.
     positions.add(contactId, r.jobTitle?.trim() || r.role?.trim() || (company && r.teamCategory?.trim() ? "Kontaktní osoba týmu" : null));
+    const meta = extrasById.get(contactId) ?? { tags: [] };
+    meta.tags.push(...splitTags(r.tags));
+    const consent = parseYesNo(r.marketingConsent);
+    if (consent !== undefined) meta.consent = consent;
+    if (r.source?.trim()) meta.source = r.source.trim().slice(0, 100);
+    extrasById.set(contactId, meta);
     if (!company) continue;
 
     // Team: match by category (+ competition / name); queue it if the club doesn't have it.
@@ -272,8 +319,17 @@ async function importContacts(user: { id: string; tenantId: string }, rows: Impo
     if (teamId) teamLinks.push({ clubTeamId: teamId, contactId, role: r.role?.trim() || "Kontaktní osoba" });
   }
 
+  // New people get consent/source straight in the insert; known ones are updated below.
+  const newIds = new Set(newContacts.map((c) => c.id!));
+  for (const c of newContacts) {
+    const meta = extrasById.get(c.id!);
+    if (meta?.consent !== undefined) c.marketingConsent = meta.consent;
+    if (meta?.source) c.source = meta.source;
+  }
+
   // Bulk writes — parents before the links that reference them.
   if (newContacts.length) await prisma.contact.createMany({ data: newContacts });
+  await applyContactExtras(tenantId, extrasById, newIds);
   if (newTeams.length) await prisma.clubTeam.createMany({ data: newTeams });
   // First role wins per person + club (a Map keeps the last, so feed it reversed).
   const club = [...new Map([...clubLinks].reverse().map((l) => [`${l.companyId}|${l.contactId}`, l])).values()];

@@ -57,6 +57,14 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
     { key: "teamLeague", label: "Tým – soutěž", example: "1. liga dorostenců", aliases: ["soutez", "soutěž", "liga týmu"] },
     { key: "teamName", label: "Tým – název", example: "Zlín Lions B", aliases: ["tym", "tým", "druzstvo", "družstvo"] },
     { key: "role", label: "Role (v klubu / týmu)", example: "Trenér", aliases: ["role"] },
+    { key: "tags", label: "Tagy (oddělené čárkou)", example: "Aplikace NEXT8, PRO", aliases: ["tagy", "tags", "štítky"] },
+    {
+      key: "marketingConsent",
+      label: "Marketingový souhlas (ano/ne)",
+      example: "ano",
+      aliases: ["marketingový souhlas", "marketingovy souhlas", "smí obchodní sdělení", "obchodní sdělení"],
+    },
+    { key: "source", label: "Zdroj", example: "Aplikace NEXT8", aliases: ["zdroj", "source"] },
     // A row can carry more people of the same club (e.g. secretary and chairman next to
     // the team's contact person). They are linked to the club; their role is taken from
     // the mapped role column, else from the name column's header ("sekretar_klubu" →

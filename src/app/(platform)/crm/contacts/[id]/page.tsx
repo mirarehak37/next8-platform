@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { Tag } from "@/components/common/tag";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -26,6 +27,11 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     },
   });
   if (!contact) notFound();
+
+  const tags = await prisma.taggedItem.findMany({
+    where: { entityType: "contact", entityId: contact.id, tag: { tenantId: user.tenantId } },
+    select: { tag: { select: { name: true } } },
+  });
 
   const [activities, owners, companies] = await Promise.all([
     prisma.activity.findMany({
@@ -113,6 +119,16 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
                 <div>GDPR souhlas: {contact.gdprConsent ? "Ano" : "Ne"}</div>
                 <div>Marketingový souhlas: {contact.marketingConsent ? "Ano" : "Ne"}</div>
               </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 border-t pt-3">
+                  {tags
+                    .map((t) => t.tag.name)
+                    .sort((a, b) => a.localeCompare(b, "cs"))
+                    .map((name) => (
+                      <Tag key={name} size="sm">{name}</Tag>
+                    ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

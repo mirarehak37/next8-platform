@@ -6,6 +6,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
 import { StatusBadge } from "@/components/status-badge";
+import { Tag } from "@/components/common/tag";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ContactFormDialog } from "@/components/crm/contact-form-dialog";
 import { CONTACT_STATUSES, findMeta } from "@/lib/constants";
@@ -21,7 +22,14 @@ export type ContactRow = {
   phone: string | null;
   status: string;
   ownerName: string;
+  marketingConsent: "yes" | "no";
+  tags: string[];
 };
+
+const CONSENT_OPTIONS = [
+  { value: "yes", label: "Smí obchodní sdělení" },
+  { value: "no", label: "Jen servisní" },
+];
 
 export function ContactsTable({
   data,
@@ -34,6 +42,10 @@ export function ContactsTable({
 }) {
   const teamOptions = useMemo(
     () => Array.from(new Set(data.flatMap((d) => d.teamNames))).sort().map((v) => ({ value: v, label: v })),
+    [data],
+  );
+  const tagOptions = useMemo(
+    () => Array.from(new Set(data.flatMap((d) => d.tags))).sort((a, b) => a.localeCompare(b, "cs")).map((v) => ({ value: v, label: v })),
     [data],
   );
 
@@ -71,6 +83,40 @@ export function ContactsTable({
         },
         filterFn: (row, id, value) => value === "all" || row.getValue(id) === value,
       },
+      {
+        accessorKey: "tags",
+        header: "Tagy",
+        meta: { label: "Tagy" },
+        cell: ({ row }) =>
+          row.original.tags.length > 0 ? (
+            <span className="flex max-w-[320px] flex-wrap gap-1">
+              {row.original.tags.slice(0, 4).map((t) => (
+                <Tag key={t} size="sm">{t}</Tag>
+              ))}
+              {row.original.tags.length > 4 && (
+                <span className="caption-style self-center text-subtle" title={row.original.tags.slice(4).join(", ")}>
+                  +{row.original.tags.length - 4}
+                </span>
+              )}
+            </span>
+          ) : (
+            "—"
+          ),
+        filterFn: (row, id, value) => value === "all" || (row.getValue(id) as string[]).includes(value),
+        enableSorting: false,
+      },
+      {
+        accessorKey: "marketingConsent",
+        header: "Obchodní sdělení",
+        meta: { label: "Obchodní sdělení" },
+        cell: ({ row }) =>
+          row.original.marketingConsent === "yes" ? (
+            <Tag tone="green" size="sm">Smí</Tag>
+          ) : (
+            <span className="text-subtle">Ne</span>
+          ),
+        filterFn: (row, id, value) => value === "all" || row.getValue(id) === value,
+      },
       { accessorKey: "ownerName", header: "Vlastník", meta: { label: "Vlastník" } },
     ],
     [],
@@ -86,6 +132,8 @@ export function ContactsTable({
       facets={[
         { columnId: "status", title: "Stav", options: CONTACT_STATUSES.map((s) => ({ value: s.value, label: s.label })) },
         { columnId: "teamNames", title: "Tým", options: teamOptions },
+        { columnId: "tags", title: "Tag", options: tagOptions },
+        { columnId: "marketingConsent", title: "Obchodní sdělení", options: CONSENT_OPTIONS },
       ]}
       toolbarActions={<ContactFormDialog owners={owners} companies={companies} />}
     />

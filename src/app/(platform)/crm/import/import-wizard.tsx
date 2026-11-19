@@ -27,8 +27,10 @@ function guessMapping(headers: string[], entity: ImportEntity): Record<number, s
     if (!norm) return;
     const match =
       fields.find((f) => !taken.has(f.key) && (f.key.toLowerCase() === norm || f.aliases?.includes(norm))) ??
+      // An exact label wins over a partial one ("Jméno" must not become "Celé jméno").
+      fields.find((f) => !taken.has(f.key) && f.label.toLowerCase() === norm) ??
       fields.find(
-        (f) => !taken.has(f.key) && (f.label.toLowerCase() === norm || norm.includes(f.label.toLowerCase()) || f.label.toLowerCase().includes(norm)),
+        (f) => !taken.has(f.key) && (norm.includes(f.label.toLowerCase()) || f.label.toLowerCase().includes(norm)),
       );
     if (match) {
       mapping[i] = match.key;

@@ -23,6 +23,15 @@ export default async function ContactsPage() {
     prisma.company.findMany({ where: { tenantId: user.tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
+  const tagged = contacts.length
+    ? await prisma.taggedItem.findMany({
+        where: { entityType: "contact", entityId: { in: contacts.map((c) => c.id) }, tag: { tenantId: user.tenantId } },
+        select: { entityId: true, tag: { select: { name: true } } },
+      })
+    : [];
+  const tagsById = new Map<string, string[]>();
+  for (const t of tagged) tagsById.set(t.entityId, [...(tagsById.get(t.entityId) ?? []), t.tag.name]);
+
   const rows: ContactRow[] = contacts.map((c) => ({
     id: c.id,
     fullName: `${c.firstName} ${c.lastName}`,
@@ -33,6 +42,8 @@ export default async function ContactsPage() {
     phone: c.phone,
     status: c.status,
     ownerName: c.owner.name,
+    marketingConsent: c.marketingConsent ? "yes" : "no",
+    tags: (tagsById.get(c.id) ?? []).sort((a, b) => a.localeCompare(b, "cs")),
   }));
 
   return (
