@@ -1,7 +1,7 @@
 // Field definitions for the CRM bulk-import wizard. Each config drives both the
 // column-mapping UI and the row validation before the server action runs.
 
-export type ImportEntity = "company" | "contact" | "lead" | "product";
+export type ImportEntity = "company" | "contact" | "appUser" | "lead" | "product";
 
 export type ImportField = {
   key: string;
@@ -19,11 +19,17 @@ export const IMPORT_REQUIRED_GROUPS: Partial<Record<ImportEntity, { groups: stri
     groups: [["fullName"], ["firstName", "lastName"], ["p2Name"], ["p3Name"]],
     label: "Celé jméno, nebo Jméno + Příjmení (případně jméno další osoby)",
   },
+  appUser: { groups: [["email"]], label: "E-mail" },
 };
 
 export const IMPORT_ENTITIES: { value: ImportEntity; label: string; description: string }[] = [
   { value: "company", label: "Kluby", description: "Název, IČO, sport, liga, kontaktní údaje…" },
   { value: "contact", label: "Kontakty", description: "Jméno, e-mail, telefon, klub i tým" },
+  {
+    value: "appUser",
+    label: "Uživatelé aplikace NEXT8",
+    description: "Export z aplikace tak, jak je. Tagy, souhlasy a segmenty; další import stav přepíše.",
+  },
   { value: "lead", label: "Leady", description: "Nové obchodní příležitosti k dokvalifikaci" },
   { value: "product", label: "Produkty", description: "Katalog produktů a služeb" },
 ];
@@ -86,6 +92,17 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
     { key: "phone", label: "Telefon", example: "+420 601 234 567" },
     { key: "source", label: "Zdroj", example: "Web" },
     { key: "estimatedValue", label: "Odhadovaná hodnota", example: "150000" },
+  ],
+  // Columns of the NEXT8 app export (aliases = its exact header names, lower-case).
+  appUser: [
+    { key: "email", label: "E-mail", required: true, example: "jana@example.cz", aliases: ["e-mail", "email"] },
+    { key: "firstName", label: "Jméno", example: "Jana", aliases: ["jméno"] },
+    { key: "lastName", label: "Příjmení", example: "Nováková", aliases: ["příjmení"] },
+    { key: "nickname", label: "Přezdívka", example: "janca", aliases: ["přezdívka"] },
+    { key: "marketingConsent", label: "Smí obchodní sdělení", example: "ano", aliases: ["smí obchodní sdělení"] },
+    { key: "ageCategory", label: "Věková kategorie", example: "16–19 let", aliases: ["věková kategorie"] },
+    { key: "teams", label: "Tým(y)", example: "Shooters Academy, Dorostenci", aliases: ["tým(y)", "týmy"] },
+    { key: "tags", label: "Tagy", example: "Účet: Free sám, Aktivita: Denní", aliases: ["tagy"] },
   ],
   product: [
     { key: "name", label: "Název", required: true, example: "Konzultační hodiny" },

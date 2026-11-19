@@ -9,6 +9,7 @@ import type { ImportEntity } from "@/lib/import-config";
 import { splitName } from "@/lib/club-export";
 import { PositionCollector } from "@/lib/contact-positions";
 import { tagGroup } from "@/lib/tag-groups";
+import { appUserToContactRow } from "@/lib/app-user-import";
 
 export type ImportRow = Record<string, string>;
 export type ImportResult = { created: number; skipped: number; linked?: number; errors: { row: number; reason: string }[] };
@@ -20,7 +21,8 @@ function num(v: string | undefined): number | undefined {
 }
 
 export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promise<ImportResult> {
-  const resource = entity === "company" ? "company" : entity === "contact" ? "contact" : entity === "lead" ? "lead" : "product";
+  const resource =
+    entity === "company" ? "company" : entity === "contact" || entity === "appUser" ? "contact" : entity === "lead" ? "lead" : "product";
   const user = await requirePermission(resource, "create");
 
   const result: ImportResult = { created: 0, skipped: 0, errors: [] };
@@ -57,6 +59,19 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
 
   if (entity === "contact") {
     await importContacts(user, rows, result);
+  }
+
+  if (entity === "appUser") {
+    const contactRows: ImportRow[] = [];
+    rows.forEach((r, i) => {
+      const row = appUserToContactRow(r);
+      if (row) contactRows.push(row);
+      else {
+        result.skipped++;
+        result.errors.push({ row: i + 1, reason: "Chybí e-mail." });
+      }
+    });
+    await importContacts(user, contactRows, result);
   }
 
   if (entity === "lead") {
@@ -112,6 +127,7 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
   const revalidateMap: Record<ImportEntity, string> = {
     company: "/crm/companies",
     contact: "/crm/contacts",
+    appUser: "/crm/contacts",
     lead: "/crm/leads",
     product: "/crm/products",
   };

@@ -284,15 +284,17 @@ export function ImportWizard() {
             <CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="h-4.5 w-4.5 text-emerald-600" /> Import dokončen</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className={`grid gap-3 ${entity === "contact" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-3 ${entity === "contact" || entity === "appUser" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div className="rounded-md border p-3">
                 <div className="text-2xl font-semibold">{result.created}</div>
                 <div className="text-xs text-muted-foreground">Vytvořeno záznamů</div>
               </div>
-              {entity === "contact" && (
+              {(entity === "contact" || entity === "appUser") && (
                 <div className="rounded-md border p-3">
                   <div className="text-2xl font-semibold">{result.linked ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Existující kontakt jen připojen ke klubu / týmu</div>
+                  <div className="text-xs text-muted-foreground">
+                    {entity === "appUser" ? "Existující kontakt aktualizován" : "Existující kontakt jen připojen ke klubu / týmu"}
+                  </div>
                 </div>
               )}
               <div className="rounded-md border p-3">
@@ -311,7 +313,9 @@ export function ImportWizard() {
             <div className="flex items-center gap-2">
               <Button onClick={reset} variant="outline">Importovat další soubor</Button>
               <Button
-                onClick={() => router.push({ company: "/crm/companies", contact: "/crm/contacts", lead: "/crm/leads", product: "/crm/products" }[entity])}
+                onClick={() => router.push(
+                    ({ company: "/crm/companies", contact: "/crm/contacts", appUser: "/crm/contacts/segments", lead: "/crm/leads", product: "/crm/products" } as const)[entity],
+                  )}
               >
                 Zobrazit výsledky
               </Button>
