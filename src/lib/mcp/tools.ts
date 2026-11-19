@@ -11,6 +11,7 @@ import { runAsUser } from "@/lib/acting-user";
 import { ActionError } from "@/lib/actions/helpers";
 import { tool, ToolError } from "./core";
 import { RECORD_TOOLS } from "./record-tools";
+import { contentPlanSchema, importContentPlan } from "@/lib/content-plan-import";
 
 export { ToolError };
 
@@ -386,7 +387,36 @@ const CORE_TOOLS = [
   }),
 ];
 
-export const TOOLS = [...CORE_TOOLS, ...RECORD_TOOLS];
+const PLAN_TOOLS = [
+  tool({
+    name: "import_content_plan",
+    title: "Nahrát obsahový plán",
+    description:
+      "Nahraje obsahový plán sociálních sítí do Marketingu: kampaň (název, popis s pravidly), příspěvky a stories " +
+      "(planKey, datum YYYY-MM-DD, čas HH:mm, téma, stav idea|draft|review|scheduled|published, formát, cílovka " +
+      "player|coach|parent|club|all, rubrika, háček, obsah, varianta, podklady, CTA, cíl, story ten den, šablona, popisek) " +
+      "a týdenní výsledky. Opakované nahrání stejný plán aktualizuje (podle planKey), stav se nevrací zpět.",
+    readOnly: false,
+    input: contentPlanSchema,
+    run: async (user, plan) => {
+      require(user, "marketing", "create");
+      const result = await importContentPlan(user, plan);
+      await logAudit({
+        tenantId: user.tenantId,
+        userId: user.id,
+        entityType: "marketingCampaign",
+        entityId: result.campaignId,
+        action: "import",
+        changes: { created: result.created, updated: result.updated, weeks: result.weeks, via: "mcp" },
+      });
+      revalidatePath("/marketing", "layout");
+      revalidatePath("/calendar");
+      return result;
+    },
+  }),
+];
+
+export const TOOLS = [...CORE_TOOLS, ...RECORD_TOOLS, ...PLAN_TOOLS];
 
 export function toolDefinitions() {
   return TOOLS.map((t) => {

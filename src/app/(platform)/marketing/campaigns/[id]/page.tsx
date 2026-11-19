@@ -12,6 +12,7 @@ import { CampaignFormDialog } from "@/components/marketing/campaign-form-dialog"
 import { PostFormDialog } from "@/components/marketing/post-form-dialog";
 import { ContentBoard } from "@/components/marketing/content-board";
 import { UtmBuilder } from "@/components/marketing/utm-builder";
+import { CampaignWeeks, type WeekRow } from "@/components/marketing/campaign-weeks";
 import { CAMPAIGN_STATUSES, LEAD_STATUSES, MARKETING_AUDIENCES, MARKETING_CHANNELS, findMeta } from "@/lib/constants";
 import { engagementRate, formatPercent, slugify } from "@/lib/marketing";
 import { campaignLeadWhere, loadPostFormOptions, postInclude, toPostView } from "@/lib/marketing-queries";
@@ -24,7 +25,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   const user = session!.user;
   if (!can(user.role, "marketing", "view")) redirect("/dashboard");
 
-  const c = await prisma.marketingCampaign.findFirst({ where: { id, tenantId: user.tenantId }, include: { owner: { select: { name: true } } } });
+  const c = await prisma.marketingCampaign.findFirst({ where: { id, tenantId: user.tenantId }, include: { owner: { select: { name: true } }, weeks: { orderBy: { week: "asc" } } } });
   if (!c) notFound();
 
   const leadWhere = campaignLeadWhere(user.tenantId, c);
@@ -44,6 +45,23 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
   if (!options.campaigns.some((x) => x.id === c.id)) options.campaigns.unshift({ id: c.id, name: c.name });
 
   const published = posts.filter((p) => p.status === "published");
+
+  // Weekly plan rows: planned / published feed posts (stories excluded) inside each week.
+  const DAY = 24 * 60 * 60 * 1000;
+  const weekRows: WeekRow[] = c.weeks.map((w) => {
+    const inWeek = posts.filter(
+      (p) => p.format !== "story" && p.scheduledAt && w.startDate && w.endDate &&
+        p.scheduledAt >= w.startDate && p.scheduledAt.getTime() < w.endDate.getTime() + DAY,
+    );
+    return {
+      id: w.id, week: w.week, theme: w.theme,
+      startDate: w.startDate?.toISOString() ?? null, endDate: w.endDate?.toISOString() ?? null,
+      planned: inWeek.filter((p) => p.status !== "cancelled").length,
+      published: inWeek.filter((p) => p.status === "published").length,
+      reach: w.reach, saves: w.saves, shares: w.shares, newFollowers: w.newFollowers, bioClicks: w.bioClicks, newTeams: w.newTeams,
+      bestPost: w.bestPost, nextChange: w.nextChange,
+    };
+  });
   const reach = published.reduce((s, p) => s + (p.reach ?? 0), 0);
   const rates = published.map(engagementRate).filter((r): r is number => r != null);
   const avgEr = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null;
@@ -104,10 +122,26 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               {c.goal && <div><div className="text-xs text-muted-foreground">Cíl</div>{c.goal}</div>}
               {c.channels.length > 0 && <div><div className="text-xs text-muted-foreground">Kanály</div>{c.channels.map((x) => findMeta(MARKETING_CHANNELS, x)?.label ?? x).join(", ")}</div>}
               <div><div className="text-xs text-muted-foreground">Vlastník</div>{c.owner.name}</div>
-              {c.description && <div><div className="text-xs text-muted-foreground">Brief</div><p className="whitespace-pre-line">{c.description}</p></div>}
+              {c.description && (
+                <details className="group" open={c.description.length < 600}>
+                  <summary className="cursor-pointer list-none text-xs text-muted-foreground">
+                    Brief a pravidla <span className="group-open:hidden">· zobrazit</span>
+                  </summary>
+                  <p className="mt-1 max-h-[420px] overflow-y-auto whitespace-pre-line text-xs leading-relaxed">{c.description}</p>
+                </details>
+              )}
             </CardContent>
           </Card>
         </div>
+
+        {weekRows.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">Výsledky po týdnech</CardTitle></CardHeader>
+            <CardContent className="px-0">
+              <CampaignWeeks weeks={weekRows} canEdit={canEdit} />
+            </CardContent>
+          </Card>
+        )}
 
         <div className="space-y-3">
           <h2 className="text-base font-semibold">Obsah kampaně</h2>

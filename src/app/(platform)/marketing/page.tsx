@@ -87,7 +87,7 @@ export default async function MarketingOverviewPage() {
           <KpiCard label="Publikováno tento měsíc" value={String(month.length)} icon={Send} />
           <KpiCard label="Naplánováno na 7 dní" value={String(next7.length)} icon={CalendarClock} hint={gaps ? `${gaps} dní ze 14 bez obsahu` : "plán na 14 dní je plný"} />
           <KpiCard label="Nápady v zásobníku" value={String(ideas)} icon={Lightbulb} />
-          <KpiCard label="Ke schválení" value={String(review.length)} icon={CheckCircle2} />
+          <KpiCard label="Připraveno" value={String(review.length)} icon={CheckCircle2} />
           <KpiCard label="Dosah tento měsíc" value={reachMonth.toLocaleString("cs-CZ")} icon={Eye} />
           <KpiCard label="Průměrný engagement" value={formatPercent(avgEr)} icon={Heart} hint="interakce / dosah" />
         </div>
@@ -104,7 +104,7 @@ export default async function MarketingOverviewPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle className="text-base">Čeká na schválení</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Připraveno k dokončení</CardTitle></CardHeader>
             <CardContent className="space-y-1">
               {review.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">Nic nečeká.</p>}
               {review.map((p) => <PostRow key={p.id} post={toPostView(p)} dialogProps={dialogProps} />)}

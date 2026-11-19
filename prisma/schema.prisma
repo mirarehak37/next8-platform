@@ -1191,6 +1191,7 @@ model MarketingCampaign {
   tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   owner  User            @relation("CampaignOwner", fields: [ownerId], references: [id])
   posts  MarketingPost[]
+  weeks  MarketingWeek[]
 
   @@index([tenantId, status])
 }
@@ -1214,6 +1215,15 @@ model MarketingPost {
   assetUrl     String? // Canva / Drive link to the creative
   link         String? // URL of the published post
   notes        String? // brief, feedback
+  // Content-plan fields (the NEXT8 monthly plan spreadsheet)
+  hook         String? // háček / nadpis
+  brief        String? // obsah: what each slide / frame shows
+  variant      String? // barevná varianta: Bílá | Černá | Modrá
+  materials    String? // podklady: files, screenshots, sources
+  goal         String? // cíl: Povědomí | Hráči v appce | Nové kluby a trenéři
+  template     String? // šablona / formát grafiky
+  storyPlan    String? // story ten den
+  planKey      String? // identity within an imported plan, so a re-import updates instead of duplicating
   // Results (filled in after publishing)
   reach        Int?
   impressions  Int?
@@ -1234,6 +1244,7 @@ model MarketingPost {
 
   @@index([tenantId, status])
   @@index([tenantId, scheduledAt])
+  @@index([tenantId, planKey])
 }
 
 // Public lead-capture form (/f/<id>): embeddable on the web or linked from an Instagram bio.
@@ -1348,4 +1359,28 @@ model SequenceEnrollment {
 
   @@unique([sequenceId, contactId])
   @@index([tenantId, status])
+}
+
+// Weekly results of a content plan (filled in every Monday from IG / FB insights).
+model MarketingWeek {
+  id           String    @id @default(cuid())
+  campaignId   String
+  week         Int
+  startDate    DateTime?
+  endDate      DateTime?
+  theme        String? // témata týdne
+  reach        Int?
+  saves        Int?
+  shares       Int?
+  newFollowers Int?
+  bioClicks    Int?
+  newTeams     Int?
+  bestPost     String?
+  nextChange   String? // co příště změnit
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, week])
 }

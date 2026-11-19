@@ -212,9 +212,9 @@ export const PRODUCT_UNITS = [
 
 export const POST_STATUSES = [
   { value: "idea", label: "Nápad", color: "slate" },
-  { value: "draft", label: "V přípravě", color: "sky" },
-  { value: "review", label: "Ke schválení", color: "amber" },
-  { value: "scheduled", label: "Naplánováno", color: "indigo" },
+  { value: "draft", label: "Čeká na podklady", color: "sky" },
+  { value: "review", label: "Připraveno", color: "amber" },
+  { value: "scheduled", label: "Hotovo · naplánováno", color: "indigo" },
   { value: "published", label: "Publikováno", color: "emerald" },
   { value: "cancelled", label: "Zrušeno", color: "rose" },
 ] as const;
@@ -243,15 +243,38 @@ export const POST_FORMATS = [
   { value: "ad", label: "Reklama" },
 ] as const;
 
-// NEXT8 rule: every piece of content is written for exactly one audience.
+// NEXT8 rule: a piece of content is written for one audience ("Všichni" only for kvízy / zákulisí).
 export const MARKETING_AUDIENCES = [
-  { value: "player", label: "Hráč", color: "sky" },
-  { value: "coach", label: "Trenér", color: "indigo" },
-  { value: "parent", label: "Rodič", color: "violet" },
-  { value: "club", label: "Klub", color: "amber" },
+  { value: "player", label: "Hráči", color: "sky" },
+  { value: "coach", label: "Trenéři", color: "indigo" },
+  { value: "parent", label: "Rodiče", color: "violet" },
+  { value: "club", label: "Kluby", color: "amber" },
+  { value: "all", label: "Všichni", color: "slate" },
+] as const;
+
+// Rubriky of the NEXT8 content plan.
+export const CONTENT_RUBRICS = [
+  "Appka",
+  "Hráčský tip",
+  "Trenérský tip",
+  "Mýtus vs fakt",
+  "Kvíz",
+  "Šatna",
+  "Za oponou",
+  "Komunita",
+  "Moment týdne",
+] as const;
+
+export const POST_GOALS = ["Povědomí", "Hráči v appce", "Nové kluby a trenéři"] as const;
+
+export const POST_VARIANTS = [
+  { value: "Bílá", className: "bg-white" },
+  { value: "Černá", className: "bg-black ring-1 ring-white/30" },
+  { value: "Modrá", className: "bg-[#2563eb]" },
 ] as const;
 
 export const CONTENT_PILLARS = [
+  ...CONTENT_RUBRICS,
   "Připravenost a data",
   "Tipy a cviky",
   "Regenerace a výživa",

@@ -16,6 +16,7 @@ export function toPostView(p: PostWithRelations): PostView {
     ambassadorId: p.ambassadorId, ambassadorName: p.ambassador ? `${p.ambassador.firstName} ${p.ambassador.lastName}` : null,
     scheduledAt: p.scheduledAt?.toISOString() ?? null, publishedAt: p.publishedAt?.toISOString() ?? null,
     caption: p.caption, hashtags: p.hashtags, cta: p.cta, assetUrl: p.assetUrl, link: p.link, notes: p.notes,
+    hook: p.hook, brief: p.brief, variant: p.variant, materials: p.materials, goal: p.goal, template: p.template, storyPlan: p.storyPlan,
     reach: p.reach, impressions: p.impressions, likes: p.likes, comments: p.comments, shares: p.shares, saves: p.saves,
     clicks: p.clicks, followers: p.followers, ownerId: p.ownerId, ownerName: p.owner.name,
   };

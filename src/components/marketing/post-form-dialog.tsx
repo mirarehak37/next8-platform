@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { FormSelect } from "@/components/form-select";
 import { FormCombobox } from "@/components/form-combobox";
 import { Section, Field } from "@/components/partnerships/form-parts";
-import { CONTENT_PILLARS, MARKETING_AUDIENCES, MARKETING_CHANNELS, POST_FORMATS, POST_STATUSES } from "@/lib/constants";
+import { CONTENT_PILLARS, MARKETING_AUDIENCES, MARKETING_CHANNELS, POST_FORMATS, POST_GOALS, POST_STATUSES, POST_VARIANTS } from "@/lib/constants";
 import { engagementRate, formatPercent, toDateTimeInput } from "@/lib/marketing";
 import { Copy, ExternalLink, Plus, Trash2 } from "lucide-react";
 
@@ -39,6 +39,13 @@ export type PostView = {
   assetUrl: string | null;
   link: string | null;
   notes: string | null;
+  hook: string | null;
+  brief: string | null;
+  variant: string | null;
+  materials: string | null;
+  goal: string | null;
+  template: string | null;
+  storyPlan: string | null;
   reach: number | null;
   impressions: number | null;
   likes: number | null;
@@ -101,6 +108,8 @@ export function PostFormDialog({
           scheduledAt: toDateTimeInput(post.scheduledAt ? new Date(post.scheduledAt) : null),
           publishedAt: toDateTimeInput(post.publishedAt ? new Date(post.publishedAt) : null),
           caption: post.caption, hashtags: post.hashtags, cta: post.cta, assetUrl: post.assetUrl, link: post.link, notes: post.notes,
+          hook: post.hook, brief: post.brief, variant: post.variant, materials: post.materials, goal: post.goal, template: post.template,
+          storyPlan: post.storyPlan,
           reach: post.reach, impressions: post.impressions, likes: post.likes, comments: post.comments, shares: post.shares,
           saves: post.saves, clicks: post.clicks, followers: post.followers, ownerId: post.ownerId,
         }
@@ -189,7 +198,12 @@ export function PostFormDialog({
                 <FormSelect value={field.value} onChange={field.onChange} options={MARKETING_AUDIENCES.map((c) => ({ value: c.value, label: c.label }))} placeholder="Vyberte…" />
               )} />
             </Field>
-            <Field label="Pilíř obsahu">
+            <Field label="Cíl">
+              <Controller control={control} name="goal" render={({ field }) => (
+                <FormCombobox value={field.value} onChange={field.onChange} options={POST_GOALS.map((g) => ({ value: g, label: g }))} placeholder="Vyberte…" creatable allowClear />
+              )} />
+            </Field>
+            <Field label="Rubrika">
               <Controller control={control} name="pillar" render={({ field }) => (
                 <FormCombobox value={field.value} onChange={field.onChange} options={CONTENT_PILLARS.map((p) => ({ value: p, label: p }))} placeholder="Vyberte…" creatable allowClear />
               )} />
@@ -203,6 +217,29 @@ export function PostFormDialog({
               <Controller control={control} name="ambassadorId" render={({ field }) => (
                 <FormCombobox value={field.value} onChange={field.onChange} options={options.ambassadors.map((c) => ({ value: c.id, label: c.name }))} placeholder="Bez ambasadora" allowClear />
               )} />
+            </Field>
+          </Section>
+
+          <Section title="Kreativa">
+            <Field label="Háček / nadpis" className="sm:col-span-2">
+              <Input placeholder="např. 5 signálů, že je hráč přetížený" {...register("hook")} />
+            </Field>
+            <Field label="Obsah (co je na slidech)" className="sm:col-span-2">
+              <Textarea rows={3} placeholder="5 slidů: úvod, …, výzva." {...register("brief")} />
+            </Field>
+            <Field label="Varianta barvy">
+              <Controller control={control} name="variant" render={({ field }) => (
+                <FormSelect value={field.value} onChange={field.onChange} options={POST_VARIANTS.map((v) => ({ value: v.value, label: v.value }))} placeholder="Vyberte…" />
+              )} />
+            </Field>
+            <Field label="Šablona / formát grafiky">
+              <Input placeholder="např. Karty a telefon (černá)" {...register("template")} />
+            </Field>
+            <Field label="Podklady" className="sm:col-span-2">
+              <Input placeholder="Screenshoty, soubory, zdroje…" {...register("materials")} />
+            </Field>
+            <Field label="Story ten den" className="sm:col-span-2">
+              <Input placeholder="Anketa: …" {...register("storyPlan")} />
             </Field>
           </Section>
 

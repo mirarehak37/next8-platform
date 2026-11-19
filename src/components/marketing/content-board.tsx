@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/status-badge";
 import { FormSelect } from "@/components/form-select";
 import { PostFormDialog, type PostFormOptions, type PostView } from "@/components/marketing/post-form-dialog";
-import { MARKETING_AUDIENCES, MARKETING_CHANNELS, POST_FORMATS, POST_STATUSES, findMeta } from "@/lib/constants";
+import { MARKETING_AUDIENCES, MARKETING_CHANNELS, POST_FORMATS, POST_STATUSES, POST_VARIANTS, findMeta } from "@/lib/constants";
 import { engagementRate, formatPercent, formatPostTime } from "@/lib/marketing";
 import { cn } from "@/lib/utils";
 import { CalendarDays, Columns3, List, Plus, Star } from "lucide-react";
@@ -56,7 +56,7 @@ export function ContentBoard({
         (channel === ALL || p.channel === channel) &&
         (audience === ALL || p.audience === audience) &&
         (campaign === ALL || p.campaignId === campaign) &&
-        (!needle || [p.title, p.caption, p.pillar, p.hashtags].some((t) => t?.toLowerCase().includes(needle))),
+        (!needle || [p.title, p.hook, p.caption, p.pillar, p.hashtags, p.goal].some((t) => t?.toLowerCase().includes(needle))),
       );
   }, [posts, moved, q, channel, audience, campaign]);
 
@@ -174,7 +174,17 @@ function PostCard({ post, draggable, dialogProps }: { post: PostView; draggable:
           post={post}
           trigger={<button type="button" className="block w-full text-left text-sm font-medium leading-snug hover:underline after:absolute after:inset-0">{post.title}</button>}
         />
-        {post.pillar && <div className="text-[11px] text-muted-foreground">{post.pillar}</div>}
+        {(post.pillar || post.variant || post.goal) && (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {post.variant && (
+              <span
+                title={`Varianta: ${post.variant}`}
+                className={cn("size-2.5 shrink-0 rounded-full", POST_VARIANTS.find((v) => v.value === post.variant)?.className ?? "bg-muted")}
+              />
+            )}
+            <span className="truncate">{[post.pillar, post.goal].filter(Boolean).join(" · ")}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
           <span className={cn(!when && post.status === "scheduled" && "text-amber-600")}>{when ? formatPostTime(when) : post.status === "scheduled" ? "chybí datum" : ""}</span>
           <span className="truncate">{post.ownerName}</span>

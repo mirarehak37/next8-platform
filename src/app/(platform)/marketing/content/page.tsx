@@ -5,6 +5,7 @@ import { can } from "@/lib/rbac";
 import { PageHeader } from "@/components/page-header";
 import { ContentBoard } from "@/components/marketing/content-board";
 import { PostFormDialog } from "@/components/marketing/post-form-dialog";
+import { ContentPlanImportDialog } from "@/components/marketing/content-plan-import-dialog";
 import { loadPostFormOptions, postInclude, toPostView } from "@/lib/marketing-queries";
 
 export default async function MarketingContentPage() {
@@ -29,7 +30,14 @@ export default async function MarketingContentPage() {
         title="Obsah a posty"
         description={`${posts.length} příspěvků · ${ideas} nápadů v zásobníku`}
         breadcrumbs={[{ label: "Marketing", href: "/marketing" }, { label: "Obsah a posty" }]}
-        actions={can(user.role, "marketing", "create") ? <PostFormDialog options={options} currentUserId={user.id} /> : null}
+        actions={
+          can(user.role, "marketing", "create") ? (
+            <>
+              <ContentPlanImportDialog />
+              <PostFormDialog options={options} currentUserId={user.id} />
+            </>
+          ) : null
+        }
       />
       <div className="p-6">
         <ContentBoard
