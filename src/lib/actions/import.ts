@@ -9,7 +9,7 @@ import type { ImportEntity } from "@/lib/import-config";
 import { splitName } from "@/lib/club-export";
 import { PositionCollector } from "@/lib/contact-positions";
 import { tagGroup } from "@/lib/tag-groups";
-import { appUserToContactRow } from "@/lib/app-user-import";
+import { APP_CUSTOM_FIELDS, appUserToContactRow } from "@/lib/app-user-import";
 
 export type ImportRow = Record<string, string>;
 export type ImportResult = { created: number; skipped: number; linked?: number; errors: { row: number; reason: string }[] };
@@ -72,6 +72,7 @@ export async function bulkImport(entity: ImportEntity, rows: ImportRow[]): Promi
       }
     });
     await importContacts(user, contactRows, result);
+    await saveAppCustomFields(user.tenantId, rows);
   }
 
   if (entity === "lead") {
@@ -151,6 +152,56 @@ function parseYesNo(v: string | undefined): boolean | undefined {
   if (["ano", "yes", "true", "1", "y", "a"].includes(s)) return true;
   if (["ne", "no", "false", "0", "n"].includes(s)) return false;
   return undefined;
+}
+
+// The remaining app columns become contact custom fields ("Údaje z aplikace").
+// A re-import is the current state: a contact's old app values are replaced, empty ones dropped.
+async function saveAppCustomFields(tenantId: string, rows: ImportRow[]) {
+  const emails = [...new Set(rows.map((r) => norm(r.email)).filter(Boolean))];
+  const present = APP_CUSTOM_FIELDS.filter((f) => rows.some((r) => f.key in r));
+  if (!emails.length || !present.length) return;
+
+  await prisma.customFieldDefinition.createMany({
+    data: APP_CUSTOM_FIELDS.map((f, order) => ({
+      tenantId,
+      entityType: "contact",
+      key: f.key,
+      label: f.header,
+      fieldType: f.fieldType,
+      order: 100 + order,
+    })),
+    skipDuplicates: true,
+  });
+  const [definitions, contacts] = await Promise.all([
+    prisma.customFieldDefinition.findMany({
+      where: { tenantId, entityType: "contact", key: { in: present.map((f) => f.key) } },
+      select: { id: true, key: true },
+    }),
+    prisma.contact.findMany({
+      where: { tenantId, email: { in: emails, mode: "insensitive" } },
+      select: { id: true, email: true },
+    }),
+  ]);
+  const defId = new Map(definitions.map((d) => [d.key, d.id]));
+  const contactId = new Map(contacts.map((c) => [norm(c.email), c.id]));
+
+  const values: Prisma.CustomFieldValueCreateManyInput[] = [];
+  const touched = new Set<string>();
+  for (const r of rows) {
+    const id = contactId.get(norm(r.email));
+    if (!id) continue;
+    touched.add(id);
+    for (const f of present) {
+      const value = r[f.key]?.trim();
+      const definitionId = defId.get(f.key);
+      if (value && definitionId) values.push({ definitionId, entityId: id, value: value.slice(0, 500) });
+    }
+  }
+  if (!touched.size) return;
+  await prisma.$transaction([
+    prisma.customFieldValue.deleteMany({ where: { definitionId: { in: [...defId.values()] }, entityId: { in: [...touched] } } }),
+    prisma.customFieldValue.createMany({ data: values, skipDuplicates: true }),
+  ]);
 }
 
 // Tags (created on first use) and, for contacts that already existed, consent + source.

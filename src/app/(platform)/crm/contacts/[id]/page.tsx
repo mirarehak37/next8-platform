@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ContactFormDialog, ContactEditTrigger } from "@/components/crm/contact-form-dialog";
 import { Users, Handshake, Building2, Mail, Phone, Smartphone } from "lucide-react";
 import { CONTACT_STATUSES, findMeta, ACTIVITY_TYPES, DEAL_STATUSES } from "@/lib/constants";
-import { formatCurrency, formatDateTime, initials } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateTime, initials } from "@/lib/format";
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,6 +27,19 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     },
   });
   if (!contact) notFound();
+
+  const customValues = await prisma.customFieldValue.findMany({
+    where: { entityId: contact.id, definition: { tenantId: user.tenantId, entityType: "contact" } },
+    select: { value: true, definition: { select: { label: true, fieldType: true, order: true } } },
+  });
+  const customFields = customValues
+    .filter((v) => v.value?.trim())
+    .sort((a, b) => a.definition.order - b.definition.order)
+    .map((v) => ({
+      label: v.definition.label,
+      value:
+        v.definition.fieldType === "date" && /^\d{4}-\d{2}-\d{2}/.test(v.value!) ? formatDate(v.value) : v.value!,
+    }));
 
   const tags = await prisma.taggedItem.findMany({
     where: { entityType: "contact", entityId: contact.id, tag: { tenantId: user.tenantId } },
@@ -132,6 +145,22 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
         </div>
+
+        {customFields.length > 0 && (
+          <Card>
+            <CardContent className="space-y-3">
+              <div className="text-sm font-medium">Údaje z aplikace a vlastní pole</div>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+                {customFields.map((f) => (
+                  <div key={f.label} className="min-w-0 space-y-1">
+                    <dt className="caption-style text-subtle">{f.label}</dt>
+                    <dd className="truncate text-sm" title={f.value}>{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="deals">
           <TabsList variant="line">

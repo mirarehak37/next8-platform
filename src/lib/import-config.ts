@@ -1,3 +1,5 @@
+import { APP_CUSTOM_FIELDS } from "@/lib/app-user-import";
+
 // Field definitions for the CRM bulk-import wizard. Each config drives both the
 // column-mapping UI and the row validation before the server action runs.
 
@@ -99,10 +101,8 @@ export const IMPORT_FIELDS: Record<ImportEntity, ImportField[]> = {
     { key: "firstName", label: "Jméno", example: "Jana", aliases: ["jméno"] },
     { key: "lastName", label: "Příjmení", example: "Nováková", aliases: ["příjmení"] },
     { key: "nickname", label: "Přezdívka", example: "janca", aliases: ["přezdívka"] },
-    { key: "marketingConsent", label: "Smí obchodní sdělení", example: "ano", aliases: ["smí obchodní sdělení"] },
-    { key: "ageCategory", label: "Věková kategorie", example: "16–19 let", aliases: ["věková kategorie"] },
-    { key: "teams", label: "Tým(y)", example: "Shooters Academy, Dorostenci", aliases: ["tým(y)", "týmy"] },
     { key: "tags", label: "Tagy", example: "Účet: Free sám, Aktivita: Denní", aliases: ["tagy"] },
+    ...APP_CUSTOM_FIELDS.map((f) => ({ key: f.key, label: f.header, aliases: [f.header.toLowerCase()] })),
   ],
   product: [
     { key: "name", label: "Název", required: true, example: "Konzultační hodiny" },
