@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import type { ImportEntity } from "@/lib/import-config";
 import { splitName } from "@/lib/club-export";
 import { PositionCollector } from "@/lib/contact-positions";
+import { tagGroup } from "@/lib/tag-groups";
 
 export type ImportRow = Record<string, string>;
 export type ImportResult = { created: number; skipped: number; linked?: number; errors: { row: number; reason: string }[] };
@@ -151,6 +152,20 @@ async function applyContactExtras(
       [...new Set(m.tags)].map((name) => ({ tagId: tagId.get(name)!, entityType: "contact", entityId })),
     );
     if (links.length) await prisma.taggedItem.createMany({ data: links, skipDuplicates: true });
+
+    // Re-import = refresh: a row with tags is the full current state of the contact's
+    // grouped tags ("Aktivita: …", "Tým: …", consent pair) — older grouped tags that the
+    // row no longer has are removed (left a team, went quiet…). Plain tags are left alone.
+    const refreshed = [...extras.entries()].filter(([id, m]) => !newIds.has(id) && m.tags.length > 0);
+    if (refreshed.length) {
+      const current = await prisma.taggedItem.findMany({
+        where: { entityType: "contact", entityId: { in: refreshed.map(([id]) => id) }, tag: { tenantId } },
+        select: { id: true, entityId: true, tag: { select: { name: true } } },
+      });
+      const keep = new Map(refreshed.map(([id, m]) => [id, new Set(m.tags)]));
+      const stale = current.filter((t) => tagGroup(t.tag.name) && !keep.get(t.entityId)?.has(t.tag.name)).map((t) => t.id);
+      if (stale.length) await prisma.taggedItem.deleteMany({ where: { id: { in: stale } } });
+    }
   }
 
   const existing = [...extras.entries()].filter(([id]) => !newIds.has(id));

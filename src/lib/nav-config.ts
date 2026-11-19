@@ -23,6 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Kluby", href: "/crm/companies", icon: "Building2", resource: "company", countKey: "companies" },
       { label: "Mapa trhu", href: "/crm/market", icon: "MapPinned", resource: "company" },
       { label: "Kontakty", href: "/crm/contacts", icon: "BookUser", resource: "contact", countKey: "contacts" },
+      { label: "Segmenty kontaktů", href: "/crm/contacts/segments", icon: "PieChart", resource: "contact" },
       { label: "Leady", href: "/crm/leads", icon: "UserPlus", resource: "lead", countKey: "leads" },
       { label: "Obchodní případy", href: "/crm/deals", icon: "KanbanSquare", resource: "deal", countKey: "openDeals" },
       { label: "Forecast", href: "/crm/forecast", icon: "BarChart3", resource: "deal" },

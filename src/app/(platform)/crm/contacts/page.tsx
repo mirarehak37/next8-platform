@@ -4,7 +4,8 @@ import { ownerScopeWhere } from "@/lib/scope";
 import { PageHeader } from "@/components/page-header";
 import { ContactsTable, type ContactRow } from "./contacts-table";
 
-export default async function ContactsPage() {
+export default async function ContactsPage({ searchParams }: { searchParams: Promise<{ tag?: string; consent?: string }> }) {
+  const { tag, consent } = await searchParams;
   const session = await auth();
   const user = session!.user;
 
@@ -50,7 +51,16 @@ export default async function ContactsPage() {
     <div>
       <PageHeader title="Kontakty" description={`${rows.length} kontaktních osob`} breadcrumbs={[{ label: "CRM" }, { label: "Kontakty" }]} />
       <div className="p-4 sm:p-6">
-        <ContactsTable data={rows} owners={owners} companies={companies} />
+        <ContactsTable
+          key={`${tag ?? ""}|${consent ?? ""}`}
+          data={rows}
+          owners={owners}
+          companies={companies}
+          initialFilters={[
+            ...(tag ? [{ id: "tags", value: tag }] : []),
+            ...(consent === "yes" || consent === "no" ? [{ id: "marketingConsent", value: consent }] : []),
+          ]}
+        />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, type ColumnFiltersState } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/column-header";
 import { StatusBadge } from "@/components/status-badge";
@@ -35,7 +35,9 @@ export function ContactsTable({
   data,
   owners,
   companies,
+  initialFilters,
 }: {
+  initialFilters?: ColumnFiltersState;
   data: ContactRow[];
   owners: { id: string; name: string }[];
   companies: { id: string; name: string }[];
@@ -128,6 +130,7 @@ export function ContactsTable({
       data={data}
       searchPlaceholder="Hledat kontakty podle jména, e-mailu…"
       exportFilename="kontakty"
+      initialFilters={initialFilters}
       emptyMessage="Zatím žádné kontakty."
       facets={[
         { columnId: "status", title: "Stav", options: CONTACT_STATUSES.map((s) => ({ value: s.value, label: s.label })) },

@@ -26,6 +26,7 @@ export function DataTable<TData>({
   toolbarActions,
   exportFilename = "export",
   emptyMessage = "Žádné záznamy",
+  initialFilters,
 }: {
   columns: ColumnDef<TData, unknown>[];
   data: TData[];
@@ -34,9 +35,11 @@ export function DataTable<TData>({
   toolbarActions?: React.ReactNode;
   exportFilename?: string;
   emptyMessage?: string;
+  /** Column filters to start with, e.g. from a link like /crm/contacts?tag=… */
+  initialFilters?: ColumnFiltersState;
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(initialFilters ?? []);
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
 
