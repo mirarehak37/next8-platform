@@ -66,6 +66,8 @@ model Tenant {
 
   sequences           Sequence[]
   sequenceEnrollments SequenceEnrollment[]
+  appSyncRuns         AppSyncRun[]
+  appMetricSnapshots  AppMetricSnapshot[]
 }
 
 model User {
@@ -1383,4 +1385,39 @@ model MarketingWeek {
   campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, week])
+}
+
+// =========================================================================
+// APP SYNC — NEXT8 app (Supabase) → CRM contacts + daily metrics for reports.
+// =========================================================================
+
+model AppSyncRun {
+  id         String    @id @default(cuid())
+  tenantId   String
+  trigger    String // cron | manual
+  status     String    @default("running") // running | ok | error
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  users      Int?
+  created    Int?
+  updated    Int?
+  error      String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, startedAt])
+}
+
+// One row per day (re-syncs the same day overwrite it); metrics = JSON of counts.
+model AppMetricSnapshot {
+  id        String   @id @default(cuid())
+  tenantId  String
+  date      DateTime @db.Date
+  metrics   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
 }

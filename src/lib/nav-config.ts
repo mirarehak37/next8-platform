@@ -68,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Reporty",
     items: [
       { label: "Přehled reportů", href: "/reports", icon: "ChartNoAxesColumn", resource: "report" },
+      { label: "Report aplikace", href: "/reports/app", icon: "Smartphone", resource: "report" },
       { label: "Ohrožené obchody", href: "/reports/slipping-deals", icon: "AlertTriangle", resource: "deal", countKey: "slipping" },
     ],
   },
