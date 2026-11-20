@@ -114,21 +114,22 @@ export default async function DashboardPage() {
     .slice(0, 6);
 
   // Trend chart — last 6 months, won (by close date) vs. currently-open (by create date)
-  const trendData = [];
-  for (let i = 5; i >= 0; i--) {
-    const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-    const [wonAgg, openAgg] = await Promise.all([
-      prisma.deal.aggregate({ where: { ...dealScope, status: "won", closedAt: { gte: monthStart, lt: monthEnd } }, _sum: { value: true } }),
-      prisma.deal.aggregate({ where: { ...dealScope, createdAt: { gte: monthStart, lt: monthEnd } }, _sum: { value: true } }),
-    ]);
-    trendData.push({
-      month: monthStart.toLocaleDateString("cs-CZ", { month: "short" }),
-      won: wonAgg._sum.value ?? 0,
-      lost: 0,
-      open: openAgg._sum.value ?? 0,
-    });
-  }
+  const trendData = await Promise.all(
+    [5, 4, 3, 2, 1, 0].map(async (i) => {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const [wonAgg, openAgg] = await Promise.all([
+        prisma.deal.aggregate({ where: { ...dealScope, status: "won", closedAt: { gte: monthStart, lt: monthEnd } }, _sum: { value: true } }),
+        prisma.deal.aggregate({ where: { ...dealScope, createdAt: { gte: monthStart, lt: monthEnd } }, _sum: { value: true } }),
+      ]);
+      return {
+        month: monthStart.toLocaleDateString("cs-CZ", { month: "short" }),
+        won: wonAgg._sum.value ?? 0,
+        lost: 0,
+        open: openAgg._sum.value ?? 0,
+      };
+    }),
+  );
 
   // Top performers — only meaningful beyond "own" scope
   let topPerformers: { name: string; wonValue: number; wonCount: number }[] = [];
