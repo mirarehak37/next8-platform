@@ -174,19 +174,11 @@ export default async function AppReportPage() {
         {!configured && (
           <Panel className="space-y-3 p-4 text-sm">
             <div className="font-medium">Napojení na aplikaci ještě není nastavené</div>
-            <ol className="list-decimal space-y-1.5 pl-5 text-muted-foreground">
-              <li>
-                V Supabase → SQL Editor spusťte skript <code className="rounded bg-muted px-1">scripts/supabase/crm_export.sql</code> z repozitáře CRM
-                (předtím v něm nahraďte <code className="rounded bg-muted px-1">ZMENTE_HESLO</code> dlouhým heslem).
-              </li>
-              <li>
-                Ve Vercelu (projekt next8-platform → Settings → Environment Variables) přidejte <code className="rounded bg-muted px-1">APP_DB_URL</code> =
-                připojovací řetězec „Session pooler“ ze Supabase (Connect), kde uživatel je <code className="rounded bg-muted px-1">crm_reader.&lt;ref projektu&gt;</code> a heslo z kroku 1.
-              </li>
-              <li>
-                Přidejte <code className="rounded bg-muted px-1">CRON_SECRET</code> (libovolný dlouhý náhodný text) pro noční synchronizaci a nasaďte znovu.
-              </li>
-            </ol>
+            <p className="text-muted-foreground">
+              Nejrychleji přes průvodce v terminálu: <code className="rounded bg-muted px-1">bash scripts/supabase/napojeni.sh</code> (v repozitáři CRM).
+              Vygeneruje heslo, připraví SQL pro Supabase a hodnoty <code className="rounded bg-muted px-1">APP_DB_URL</code> a{" "}
+              <code className="rounded bg-muted px-1">CRON_SECRET</code> pro Vercel. Po uložení proměnných ve Vercelu nasaďte znovu.
+            </p>
           </Panel>
         )}
 

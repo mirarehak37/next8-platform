@@ -11,8 +11,8 @@
 --   • roli crm_reader, která smí JEN zavolat tuto funkci. Do tabulek
 --     aplikace (ani auth.users) přímý přístup nemá.
 --
--- Heslo role: nahraďte ZMENTE_HESLO dlouhým náhodným heslem (aspoň 32 znaků)
--- a pak ho vložte jen do Vercelu (proměnná APP_DB_URL), nikam jinam.
+-- Heslo role: nejjednodušeji přes průvodce scripts/supabase/napojeni.sh, který ho
+-- vygeneruje a dosadí. Ručně: nahraďte ZMENTE-HESLO níže dlouhým náhodným heslem.
 -- ============================================================================
 
 create schema if not exists crm;
@@ -215,10 +215,13 @@ revoke all on function crm.export_users() from public;
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'crm_reader') then
-    create role crm_reader with login password 'ZMENTE_HESLO' noinherit;
+    create role crm_reader with noinherit;
   end if;
 end
 $$;
+
+-- Heslo se nastaví při každém spuštění (opakované spuštění = nové heslo).
+alter role crm_reader with login password 'ZMENTE_HESLO';
 
 alter role crm_reader set statement_timeout = '60s';
 grant usage on schema crm to crm_reader;
